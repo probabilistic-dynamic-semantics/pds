@@ -131,9 +131,9 @@ maxes = \case
 -- probability distribution.
 observations :: DeltaRule
 observations = \case
-  Let _ (Observe Tr) k                                -> Just k
-  Let _ (Observe Fa) k                                -> Just Undefined
-  _                                                   -> Nothing
+  Let _ (Observe Tr) k -> Just k
+  Let _ (Observe Fa) k -> Just Undefined
+  _                    -> Nothing
 
 -- | Computes probabilities for certain probabilitic programs.
 probabilities :: DeltaRule

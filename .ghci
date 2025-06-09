@@ -1,0 +1,15 @@
+:set -isrc
+:load Grammar Grammar.CCG Grammar.Lexica.SynSem Grammar.Lexica.SynSem.Adjectives Grammar.Parser Lambda Lambda.Convenience Lambda.Terms Lambda.Types Modeling Modeling.Delta Modeling.ToStan
+
+import Grammar
+import Grammar.CCG
+import Grammar.Lexica.SynSem
+import Grammar.Lexica.SynSem.Adjectives
+import Grammar.Parser
+import Lambda
+import Lambda.Convenience
+import Lambda.Terms
+import Lambda.Types
+import Modeling
+import Modeling.Delta
+import Modeling.ToStan

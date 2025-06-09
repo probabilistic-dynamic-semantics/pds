@@ -1,4 +1,4 @@
-:set -isrc
+:set -isrc -XDataKinds -XTypeApplications
 :load Grammar Grammar.CCG Grammar.Lexica.SynSem Grammar.Lexica.SynSem.Adjectives Grammar.Parser Lambda Lambda.Convenience Lambda.Terms Lambda.Types Modeling Modeling.Delta Modeling.ToStan
 
 import Grammar

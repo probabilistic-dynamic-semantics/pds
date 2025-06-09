@@ -60,7 +60,9 @@ tau = \case
   Left  "j"            -> Just e
   Left  "b"            -> Just e
   Left  "Bernoulli"    -> Just (r :→ P t)
+  Left  "Beta"         -> Just (r :× r :→ P r)
   Left  "Normal"       -> Just (r :× r :→ P r)
+  Left  "LogitNormal"  -> Just (r :× r :→ P r)
   Left  "Truncate"     -> Just (r :× r :→ P r :→ P r)
   Left  "upd_tall"     -> Just ((e :→ r) :→ ι :→ ι)
   Left  "tall"         -> Just (ι :→ e :→ r)
@@ -104,9 +106,8 @@ pattern Zero      = DCon 0
 pattern Tr        = SCon "T"
 pattern Undefined = SCon "#"
 
-pattern Bern, CG, Factor, Indi, Neg, Tall, Normal, Observe, Pr, Epi, SocPla :: Term -> Term
+pattern Bern, CG, Factor, Indi, Neg, Tall, Observe, Pr, Epi, SocPla :: Term -> Term
 pattern Bern p    = SCon "Bernoulli" `App` p
-pattern Normal p  = SCon "Normal" `App` p
 pattern CG s      = SCon "CG" `App` s
 pattern Factor x  = SCon "factor" `App` x
 pattern Indi p    = SCon "𝟙" `App` p
@@ -123,25 +124,29 @@ pattern Pr t      = SCon "Pr" `App` t
 pattern Prop1 i   = SCon "prop1" `App` i
 pattern QUD s     = SCon "QUD" `App` s
 
-pattern Add, And, Eq, GE, Mult, Or, UpdEpi, UpdCG, UpdTall, UpdSocPla, UpdProp1, UpdQUD :: Term -> Term -> Term
-pattern Add x y        = SCon "add" `App` (Pair x y)
-pattern And p q        = SCon "(∧)" `App` p `App` q
-pattern Or p q = SCon "(∨)" `App` p `App` q
-pattern Eq x y         = SCon "(=)" `App` (Pair x y)
-pattern GE a b         = SCon "(≥)" `App` a `App` b
-pattern Mult x y       = SCon "mult" `App` (Pair x y)
-pattern UpdEpi acc i   = SCon "upd_epi" `App` acc `App` i
-pattern UpdCG cg s     = SCon "upd_CG" `App` cg `App` s
-pattern UpdLing p i    = SCon "upd_ling" `App` p `App` i
-pattern UpdTauKnow b s = SCon "upd_tau_know" `App` b `App` s
-pattern UpdTall p i    = SCon "upd_tall" `App` p `App` i
-pattern UpdSocPla p i  = SCon "upd_soc_pla" `App` p `App` i
-pattern UpdProp1 b i   = SCon "upd_prop1" `App` b `App` i
-pattern UpdQUD q s     = SCon "upd_QUD" `App` q ` App` s
+pattern Add, And, Eq, GE, Mult, Normal, Or, UpdEpi, UpdCG, UpdTall, UpdSocPla, UpdProp1, UpdQUD :: Term -> Term -> Term
+pattern Add x y         = SCon "add" `App` (Pair x y)
+pattern And p q         = SCon "(∧)" `App` p `App` q
+pattern Or p q          = SCon "(∨)" `App` p `App` q
+pattern Eq x y          = SCon "(=)" `App` (Pair x y)
+pattern GE a b          = SCon "(≥)" `App` a `App` b
+pattern Mult x y        = SCon "mult" `App` (Pair x y)
+pattern Beta x y        = SCon "Beta" `App` (Pair x y)
+pattern Normal x y      = SCon "Normal" `App` (Pair x y)
+pattern LogitNormal x y = SCon "LogitNormal" `App` (Pair x y)
+pattern UpdEpi acc i    = SCon "upd_epi" `App` acc `App` i
+pattern UpdCG cg s      = SCon "upd_CG" `App` cg `App` s
+pattern UpdLing p i     = SCon "upd_ling" `App` p `App` i
+pattern UpdTauKnow b s  = SCon "upd_tau_know" `App` b `App` s
+pattern UpdTall p i     = SCon "upd_tall" `App` p `App` i
+pattern UpdSocPla p i   = SCon "upd_soc_pla" `App` p `App` i
+pattern UpdProp1 b i    = SCon "upd_prop1" `App` b `App` i
+pattern UpdQUD q s      = SCon "upd_QUD" `App` q ` App` s
 
-pattern Disj, ITE :: Term -> Term -> Term -> Term
+pattern Disj, ITE, Truncate :: Term -> Term -> Term -> Term
 pattern Disj x m n     = SCon "disj" `App` x `App` (Pair m n)
-pattern ITE p x y = SCon "if_then_else" `App` p `App` (Pair x y)
+pattern ITE p x y      = SCon "if_then_else" `App` p `App` (Pair x y)
+pattern Truncate m x y = SCon "Truncate" `App` (Pair x y) `App` m
 
 -- *** Convenience and smart constructors
 
@@ -175,7 +180,7 @@ adjPrior = Return (upd_CG (let' b (Bern (dCon 0.5)) (let' x (normalL (-1)) (let'
   where j = UpdSocPla (lam x b) _0
 
 knowPrior :: Term
-knowPrior = let' x (Normal (0 & 1)) (let' y (Normal (0 & 1)) (let' z (Normal (0 & 1)) (let' b (Bern x) (Return (UpdCG (let' c (Bern y) (let' d (Bern z) (Return (UpdLing (lam x c) (UpdEpi (lam x (lam p d)) _0))))) (UpdTauKnow b ϵ))))))
+knowPrior = let' x (LogitNormal 0 1) (let' y (LogitNormal 0 1) (let' z (LogitNormal 0 1) (let' b (Bern x) (Return (UpdCG (let' c (Bern y) (let' d (Bern z) (Return (UpdLing (lam x c) (UpdEpi (lam x (lam p d)) _0))))) (UpdTauKnow b ϵ))))))
 
 getPP = Lam "s" (Return (Var "s" & Var "s"))
 
@@ -257,6 +262,8 @@ cons = \case
 -- inference.
 sampleOnly :: Term -> Bool
 sampleOnly = \case
-  Bern _   -> True
-  Normal _ -> True
-  _        -> False
+  Bern _          -> True
+  Normal _ _      -> True
+  LogitNormal _ _ -> True
+  Truncate _ _ _  -> True
+  _               -> False

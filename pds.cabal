@@ -1,0 +1,31 @@
+cabal-version:       >=1.10
+name:                probabilistic-dynamics
+version:             0.1.0.0
+synopsis:            Code for Probabilistic Dynamic Semantics.
+description:         
+license:             MIT
+license-file:        LICENSE
+author:              Julian Grove and Aaron Steven White
+maintainer:          julian.grove@gmail.com
+copyright:           2025
+build-type:          Simple
+
+library 
+  exposed-modules: Grammar
+                 , Grammar.CCG
+                 , Grammar.Lexica.SynSem
+                 , Grammar.Lexica.SynSem.Adjectives
+                 , Grammar.Parser
+                 , Lambda
+                 , Lambda.Convenience
+                 , Lambda.Terms
+                 , Lambda.Types
+                 , Modeling
+                 , Modeling.Delta
+                 , Modeling.ToStan
+  hs-source-dirs: src
+  build-depends: base
+               , containers
+               , mtl
+               , transformers
+  default-language: Haskell2010

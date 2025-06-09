@@ -93,5 +93,5 @@ s1         = termOf $ getSemantics @Factivity 1 ["jo", "knows", "bo", "is", "a",
 q1         = termOf $ getSemantics @Factivity 1 ["likely", "bo", "is", "a", "linguist"]
 discourse  = ty tau $ assert s1 >>> ask q1
 deltaRules = arithmetic <||> indices <||> states <||> disjunctions <||> cleanUp <||> maxes <||> probabilities <||> logical <||> ite <||> observations
-simplified = asTyped tau (betaDeltaNormal deltaRules . respond (lam x (Truncate (Normal x (Var "sigma")) 0 1)) knowPrior) discourse
+factivityExample = asTyped tau (betaDeltaNormal deltaRules . respond (lam x (Truncate (Normal x (Var "sigma")) 0 1)) knowPrior) discourse
 

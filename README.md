@@ -2,10 +2,10 @@
 
 Develop probabilistic semantic grammar fragments and convert them to Stan code.
 
-`cabal v2-repl --repl-options="-ghci-script .ghci"`
-
 ```
-ghci> stanOutput simplified
+cabal v2-repl --repl-options="-ghci-script .ghci"
+
+ghci> stanOutput factivityExample
 model {
   // FIXED EFFECTS
   v ~ logit_normal(0.0, 1.0);

@@ -37,8 +37,8 @@ instance Show Model where
   show (Model m) = "model {\n  // FIXED EFFECTS\n" ++ render m ++ "}"
     where render [] = ""
           render [(v, d)]     = " \n  // LIKELIHOOD\n  "  ++
-                                "target += " ++ map toLower d ++ ";\n"
-          render ((v, d) : s) = "  " ++ v ++ " ~ " ++ map toLower d ++ ";\n" ++ render s
+                                "target += " ++ d ++ ";\n"
+          render ((v, d) : s) = "  " ++ v ++ " ~ " ++ d ++ ";\n" ++ render s
 
 data Error = TypeError deriving (Eq)
 

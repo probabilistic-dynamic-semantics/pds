@@ -58,16 +58,6 @@ pRender (Normal x y) = "normal(" ++ show x ++ ", " ++ show y ++ ")"
 pRender (LogitNormal x y) = "logit_normal(" ++ show x ++ ", " ++ show y ++ ")"
 pRender (Truncate m x y) = pRender m ++ " T[" ++ show x ++ ", " ++ show y ++ "]"
 
-stanRender :: Term -> String
-stanRender = \case
-  Var x      -> x
-  Disj x y z -> "mix(" ++ show x ++ ", " ++ stanRender y ++ ", " ++ stanRender z ++ ")"
-  SCon x     -> map toLower x
-  DCon x     -> show x
-  Pair x y   -> stanRender x ++ ", " ++ stanRender y
-  App x y    -> stanRender x ++ "(" ++ stanRender y ++ ")"
-  Return x   -> "dirac(" ++ stanRender x ++ ")"
-
 toStan :: Term -> Writer [Error] Model
 toStan = \case
   t         | typeOf (ty tau t) /= Just (P (At R)) -> do

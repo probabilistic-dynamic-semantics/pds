@@ -91,15 +91,18 @@ indicator = \case
 -- | Computes functions on indices.
 indices :: DeltaRule
 indices = \case
-  SocPla (UpdSocPla p _) -> Just p
-  SocPla (UpdLing _ i)   -> Just (SocPla i)
-  SocPla (UpdEpi _  i)   -> Just (SocPla i)
-  Ling   (UpdLing p _)   -> Just p
-  Ling   (UpdEpi _  i)   -> Just (Tall i)
-  Ling   (UpdSocPla _ i) -> Just (Tall i)
   Epi    (UpdEpi p _)    -> Just p
   Epi    (UpdLing _ i)   -> Just (Epi i)
   Epi    (UpdSocPla _ i) -> Just (Epi i)
+  Ling   (UpdLing p _)   -> Just p
+  Ling   (UpdEpi _  i)   -> Just (Tall i)
+  Ling   (UpdSocPla _ i) -> Just (Tall i)
+  SocPla (UpdSocPla p _) -> Just p
+  SocPla (UpdTall _ i)   -> Just (SocPla i)
+  SocPla (UpdLing _ i)   -> Just (SocPla i)
+  SocPla (UpdEpi _  i)   -> Just (SocPla i)
+  Tall   (UpdSocPla _ i) -> Just (Tall i)
+  Tall   (UpdTall p _)   -> Just p
   _                      -> Nothing
 
 -- | Computes /if then else/.

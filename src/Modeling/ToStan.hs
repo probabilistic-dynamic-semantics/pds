@@ -78,10 +78,17 @@ getSemantics :: forall (p :: Project). Interpretation p SynSem => Int -> [String
 getSemantics n = sem . (indices !! n) . getList . flip (interpretations @p) 0
   where indices = head : map (\f -> f . tail) indices
 stanOutput     = fst . runWriter . toStan . termOf
-  
-s1         = termOf $ getSemantics @Factivity 1 ["jo", "knows", "bo", "is", "a", "linguist"] 
-q1         = termOf $ getSemantics @Factivity 1 ["likely", "bo", "is", "a", "linguist"]
-discourse  = ty tau $ assert s1 >>> ask q1
-deltaRules = arithmetic <||> indices <||> states <||> disjunctions <||> cleanUp <||> maxes <||> probabilities <||> logical <||> ite <||> observations
-factivityExample = asTyped tau (betaDeltaNormal deltaRules . respond (lam x (Truncate (Normal x (Var "sigma")) 0 1)) knowPrior) discourse
 
+deltaRules = arithmetic <||> indices <||> states <||> disjunctions <||> cleanUp <||> maxes <||> probabilities <||> logical <||> ite <||> observations
+  
+s1         = termOf $ getSemantics @Factivity 1 ["jo", "knows", "that", "bo", "is", "a", "linguist"] 
+q1         = termOf $ getSemantics @Factivity 1 ["how", "likely", "that", "bo", "is", "a", "linguist"]
+discourse  = ty tau $ assert s1 >>> ask q1
+
+factivityExample = asTyped tau (betaDeltaNormal deltaRules . factivityRespond factivityPrior) discourse
+
+s1'        = termOf $ getSemantics @Adjectives 1 ["jo", "is", "a", "soccer player"] 
+q1'        = termOf $ getSemantics @Adjectives 0 ["how", "tall", "jo", "is"]
+discourse' = ty tau $ assert s1' >>> ask q1'
+
+scaleNormingExample = asTyped tau (betaDeltaNormal deltaRules . scaleNormingRespond scaleNormingPrior) discourse'

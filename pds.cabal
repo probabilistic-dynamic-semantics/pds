@@ -1,7 +1,7 @@
 cabal-version:       >=1.10
-name:                probabilistic-dynamics
+name:                pds
 version:             0.1.0.0
-synopsis:            Code for Probabilistic Dynamic Semantics.
+synopsis:            Code for Probabilistic Dynamic Semantics (PDS).
 description:         
 license:             MIT
 license-file:        LICENSE
@@ -15,6 +15,7 @@ library
                  , Grammar.CCG
                  , Grammar.Lexica.SynSem
                  , Grammar.Lexica.SynSem.Adjectives
+                 , Grammar.Lexica.SynSem.Factivity
                  , Grammar.Parser
                  , Lambda
                  , Lambda.Convenience

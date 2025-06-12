@@ -126,3 +126,18 @@ instance Interpretation Adjectives SynSem where
                                    syn = S :\: NP :/: NP :\: (S :\: NP :/: NP) :/: (S :\: NP :/: NP),
                                    sem = ty tau (purePP (lam m (lam n (lam x (lam y (lam i (sCon "(∧)" @@ (n @@ x @@ y @@ i) @@ (m @@ x @@ y @@ i))))))))
                                    } ]
+
+--------------------------------------------------------------------------------
+-- * Priors and response functions
+
+-- | Prior to be used for the scale-norming example.
+scaleNormingPrior :: Term
+scaleNormingPrior = Return (upd_CG cg' ϵ)
+  where cg' = let' b (Bern (dCon 0.5)) (let' x (normal 0 1) (let' y (normal 0 1) j'))
+        j'  = Return (UpdTall (lam z (ITE (SocPla i' @@ z) x y)) i')
+        i'  = UpdSocPla (lam x b) _0
+
+
+-- | Respones function to be used for the scale-norming example.
+scaleNormingRespond :: Term -> Term -> Term
+scaleNormingRespond = respond (lam x (Normal x (Var "sigma")))

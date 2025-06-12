@@ -52,7 +52,7 @@ tau = \case
   Left  "upd_ling"     -> Just ((e :→ t) :→ ι :→ ι)
   Left  "ling"         -> Just (ι :→ e :→ t)
   Left  "phil"         -> Just (ι :→ e :→ t)
-  Left  "upd_soc_pla"  -> Just ((e :→ r) :→ ι :→ ι)
+  Left  "upd_soc_pla"  -> Just ((e :→ t) :→ ι :→ ι)
   Left  "soc_pla"      -> Just (ι :→ e :→ t)
   Left  "sleep"        -> Just (ι :→ e :→ t)
   Left  "like"         -> Just (ι :→ e :→ e :→ t)
@@ -175,14 +175,7 @@ _0    = sCon "@"
 prop1 = sCon "prop1"
 prop2 = sCon "prop2"
 
-adjPrior :: Term
-adjPrior = Return (upd_CG (let' b (Bern (dCon 0.5)) (let' x (normalL (-1)) (let' y (normalL 1) (Return (UpdTall (lam z (ITE (SocPla j @@ z) x y)) j))))) s)
-  where j = UpdSocPla (lam x b) _0
-
-knowPrior :: Term
-knowPrior = let' x (LogitNormal 0 1) (let' y (LogitNormal 0 1) (let' z (LogitNormal 0 1) (let' b (Bern x) (Return (UpdCG (let' c (Bern y) (let' d (Bern z) (Return (UpdLing (lam x c) (UpdEpi (lam x (lam p d)) _0))))) (UpdTauKnow b ϵ))))))
-
-getPP = Lam "s" (Return (Var "s" & Var "s"))
+getPP = lam s (Return (s & s))
 
 epi, cg, factor, observe, normalL, max', purePP, putPP, pr :: Term -> Term
 assert φ       = φ >>>= lam p (getPP >>>= lam s ((purePP (cg s)) >>>= lam c (putPP (upd_CG (let' i c (let' _' (observe (p @@ i)) (Return i))) s))))

@@ -83,12 +83,16 @@ instance Interpretation Factivity SynSem where
                                  sem = ty tau (purePP (lam x x))
                                  } ]
             "likely"      -> [ SynSem {
-                                 syn = Qdeg :/: S,
+                                 syn = S :\: Deg :/: S,
                                  sem = ty tau (lam s (purePP (lam p (lam d (lam _' (sCon "(≥)" @@ (Pr (let' i (CG s) (Return (p @@ i)))) @@ d)))) @@ s))
                                  } ]
             "how"         -> [ SynSem {
                                  syn =  Qdeg :/: (S :/: AP) :/: (AP :\: Deg),
                                  sem = ty tau (purePP (lam x (lam y (lam z (y @@ (x @@ z))))))
+                                 }
+                             , SynSem {
+                                 syn = Qdeg :/: (S :\: Deg),
+                                 sem = ty tau (purePP (lam x x))
                                  } ]
             "is"          -> [ SynSem {
                                  syn = S :\: NP :/: AP,
@@ -121,4 +125,21 @@ instance Interpretation Factivity SynSem where
                              , SynSem {
                                  syn = S :\: NP :/: NP :\: (S :\: NP :/: NP) :/: (S :\: NP :/: NP),
                                  sem = ty tau (purePP (lam m (lam n (lam x (lam y (lam i (sCon "(∧)" @@ (n @@ x @@ y @@ i) @@ (m @@ x @@ y @@ i))))))))
+                                 }
+                             ]
+            "that"        -> [ SynSem {
+                                 syn = S :/: S,
+                                 sem = ty tau (purePP (lam x x))
                                  } ]
+
+--------------------------------------------------------------------------------
+-- * Priors and response functions
+
+
+-- | Prior to be used for the factivity example.
+factivityPrior :: Term
+factivityPrior = let' x (LogitNormal 0 1) (let' y (LogitNormal 0 1) (let' z (LogitNormal 0 1) (let' b (Bern x) (Return (UpdCG (let' c (Bern y) (let' d (Bern z) (Return (UpdLing (lam x c) (UpdEpi (lam x (lam p d)) _0))))) (UpdTauKnow b ϵ))))))
+
+-- | Respones function to be used for the factivity example.
+factivityRespond :: Term -> Term -> Term
+factivityRespond = respond (lam x (Truncate (Normal x (Var "sigma")) 0 1))

@@ -1,7 +1,7 @@
 cabal-version:       >=1.10
-name:                probabilistic-dynamics
+name:                pds
 version:             0.1.0.0
-synopsis:            Code for Probabilistic Dynamic Semantics.
+synopsis:            Code for Probabilistic Dynamic Semantics (PDS).
 description:         
 license:             MIT
 license-file:        LICENSE
@@ -15,17 +15,28 @@ library
                  , Grammar.CCG
                  , Grammar.Lexica.SynSem
                  , Grammar.Lexica.SynSem.Adjectives
+                 , Grammar.Lexica.SynSem.Factivity
                  , Grammar.Parser
                  , Lambda
                  , Lambda.Convenience
+                 , Lambda.Delta
                  , Lambda.Terms
                  , Lambda.Types
-                 , Modeling
-                 , Modeling.Delta
-                 , Modeling.ToStan
+                 , Target
+                 , Target.Stan
   hs-source-dirs: src
   build-depends: base
                , containers
                , mtl
                , transformers
   default-language: Haskell2010
+
+test-suite pds-test
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test
+  main-is:             Spec.hs
+  build-depends:       base
+                     , pds
+                     , hspec >= 2.0
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+  default-language:    Haskell2010

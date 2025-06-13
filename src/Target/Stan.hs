@@ -8,16 +8,16 @@
 {-# LANGUAGE TypeApplications #-}
 
 {-|
-Module      : Modeling.ToStan
-Description : CCG derivations
+Module      : Target.Stan
+Description : Exports probabilistic programs as Stan code.
 Copyright   : (c) Julian Grove and Aaron Steven White, 2025
 License     : MIT
 Maintainer  : julian.grove@gmail.com
 
-λ-terms are translated into Stan code.
+Probabilistic programs encoded as λ-terms are translated into Stan code.
 -}
 
-module Modeling.ToStan where
+module Target.Stan where
 
 import Control.Monad.Writer
 import Control.Monad.State
@@ -26,7 +26,6 @@ import Lambda
 import Grammar
 import Grammar.Lexica.SynSem.Adjectives
 import Grammar.Lexica.SynSem.Factivity
-import Modeling.Delta
 
 type Distr = String
 type Var   = String
@@ -45,18 +44,23 @@ data Error = TypeError deriving (Eq)
 instance Show Error where
   show TypeError = "Error: Term does not have type P r!"
 
+stanShow :: Term -> String
+stanShow v@(Var _) = show v
+stanShow x@(DCon _) = show x
+stanShow (NormalCDF x y z) = "normal_cdf(" ++ stanShow z ++ ", " ++ stanShow x ++ ", " ++ stanShow y ++ ")"
+
 lRender :: Var -> Term -> String
 lRender v (Truncate (Normal x y) z w) = "truncated_normal_lpdf(" ++ v ++
                                         " | " ++ show x ++ ", " ++ show y ++
                                         ", " ++ show z ++ ", " ++ show w ++ ")"
 lRender v (Normal x y) = "normal_lpdf(" ++ v ++
-                         " | " ++ show x ++ ", " ++ show y ++ ")"
-lRender v (Disj x y z) = "log_mix(" ++ show x ++ ", " ++ lRender v y ++ ", " ++ lRender v z ++ ")" 
+                         " | " ++ stanShow x ++ ", " ++ stanShow y ++ ")"
+lRender v (Disj x y z) = "log_mix(" ++ stanShow x ++ ", " ++ lRender v y ++ ", " ++ lRender v z ++ ")" 
 
 pRender :: Term -> String
-pRender (Normal x y) = "normal(" ++ show x ++ ", " ++ show y ++ ")"
-pRender (LogitNormal x y) = "logit_normal(" ++ show x ++ ", " ++ show y ++ ")"
-pRender (Truncate m x y) = pRender m ++ " T[" ++ show x ++ ", " ++ show y ++ "]"
+pRender (Normal x y) = "normal(" ++ stanShow x ++ ", " ++ stanShow y ++ ")"
+pRender (LogitNormal x y) = "logit_normal(" ++ stanShow x ++ ", " ++ stanShow y ++ ")"
+pRender (Truncate m x y) = pRender m ++ " T[" ++ stanShow x ++ ", " ++ stanShow y ++ "]"
 
 toStan :: Term -> Writer [Error] Model
 toStan = \case
@@ -78,10 +82,22 @@ getSemantics :: forall (p :: Project). Interpretation p SynSem => Int -> [String
 getSemantics n = sem . (indices !! n) . getList . flip (interpretations @p) 0
   where indices = head : map (\f -> f . tail) indices
 stanOutput     = fst . runWriter . toStan . termOf
-  
-s1         = termOf $ getSemantics @Factivity 1 ["jo", "knows", "bo", "is", "a", "linguist"] 
-q1         = termOf $ getSemantics @Factivity 1 ["likely", "bo", "is", "a", "linguist"]
-discourse  = ty tau $ assert s1 >>> ask q1
-deltaRules = arithmetic <||> indices <||> states <||> disjunctions <||> cleanUp <||> maxes <||> probabilities <||> logical <||> ite <||> observations
-factivityExample = asTyped tau (betaDeltaNormal deltaRules . respond (lam x (Truncate (Normal x (Var "sigma")) 0 1)) knowPrior) discourse
 
+deltaRules = arithmetic <||> indices <||> states <||> disjunctions <||> cleanUp <||> maxes <||> probabilities <||> logical <||> ite <||> observations
+  
+s1         = termOf $ getSemantics @Factivity 1 ["jo", "knows", "that", "bo", "is", "a", "linguist"] 
+q1         = termOf $ getSemantics @Factivity 1 ["how", "likely", "that", "bo", "is", "a", "linguist"]
+discourse  = ty tau $ assert s1 >>> ask q1
+
+factivityExample = asTyped tau (betaDeltaNormal deltaRules . factivityRespond factivityPrior) discourse
+
+s1'        = termOf $ getSemantics @Adjectives 1 ["jo", "is", "a", "soccer player"] 
+q1'        = termOf $ getSemantics @Adjectives 0 ["how", "tall", "jo", "is"]
+discourse' = ty tau $ assert s1' >>> ask q1'
+
+scaleNormingExample = asTyped tau (betaDeltaNormal deltaRules . adjectivesRespond scaleNormingPrior) discourse'
+
+q1''        = termOf $ getSemantics @Adjectives 0 ["how", "likely", "that", "jo", "is", "tall"]
+discourse'' = ty tau $ assert s1' >>> ask q1''
+
+likelihoodExample = asTyped tau (betaDeltaNormal deltaRules . adjectivesRespond likelihoodPrior) discourse''

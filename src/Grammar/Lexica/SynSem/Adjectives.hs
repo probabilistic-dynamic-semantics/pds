@@ -40,8 +40,12 @@ instance Interpretation Adjectives SynSem where
                                    } ]
             "tall"          -> [ SynSem {
                                    syn = AP :\: Deg,
-                                   sem = ty tau (purePP (lam d (lam x (lam i (sCon "(≥)" @@ (sCon "tall" @@ i @@ x) @@ d)))))
-                                   } ]
+                                   sem = ty tau (purePP (lam d (lam x (lam i (sCon "(≥)" @@ (sCon "height" @@ i @@ x) @@ d)))))
+                                   }
+                               , SynSem {
+                                   syn = AP,
+                                   sem = ty tau (lam s (purePP (lam x (lam i (sCon "(≥)" @@ (sCon "height" @@ i @@ x) @@ (sCon "d_tall" @@ s)))) @@ s))
+                                        } ]
             "jo"            -> [ SynSem {
                                    syn = NP,
                                    sem = ty tau (purePP (sCon "j"))
@@ -86,14 +90,19 @@ instance Interpretation Adjectives SynSem where
                                    syn = NP :/: N,
                                    sem = ty tau (purePP (lam x x))
                                    } ]
-            "likely"        -> [ SynSem {
-                                   syn = Qdeg :/: S,
-                                   sem = ty tau (lam s (purePP (lam p (lam d (lam _' (sCon "(≥)" @@ (Pr (let' i (CG s) (Return (p @@ i)))) @@ d)))) @@ s))
-                                   } ]
-            "how"           -> [ SynSem {
-                                   syn =  Qdeg :/: (S :/: AP) :/: (AP :\: Deg),
-                                   sem = ty tau (purePP (lam x (lam y (lam z (y @@ (x @@ z))))))
-                                   } ]
+            "likely"      -> [ SynSem {
+                                 syn = S :\: Deg :/: S,
+                                 sem = ty tau (lam s (purePP (lam p (lam d (lam _' (sCon "(≥)" @@ (Pr (let' i (CG s) (Return (p @@ i)))) @@ d)))) @@ s))
+                                 } ]
+            "how"         -> [ SynSem {
+                                 syn =  Qdeg :/: (S :/: AP) :/: (AP :\: Deg),
+                                 sem = ty tau (purePP (lam x (lam y (lam z (y @@ (x @@ z))))))
+                                 }
+                             , SynSem {
+                                 syn = Qdeg :/: (S :\: Deg),
+                                 sem = ty tau (purePP (lam x x))
+                                 } ]
+
             "is"            -> [ SynSem {
                                    syn = S :\: NP :/: AP,
                                    sem = ty tau (purePP (lam x x))
@@ -126,3 +135,27 @@ instance Interpretation Adjectives SynSem where
                                    syn = S :\: NP :/: NP :\: (S :\: NP :/: NP) :/: (S :\: NP :/: NP),
                                    sem = ty tau (purePP (lam m (lam n (lam x (lam y (lam i (sCon "(∧)" @@ (n @@ x @@ y @@ i) @@ (m @@ x @@ y @@ i))))))))
                                    } ]
+            "that"        -> [ SynSem {
+                                 syn = S :/: S,
+                                 sem = ty tau (purePP (lam x x))
+                                 } ]
+
+
+--------------------------------------------------------------------------------
+-- * Priors and response functions
+
+-- | Prior to be used for the scale-norming example.
+scaleNormingPrior :: Term
+scaleNormingPrior = Return (upd_CG cg' ϵ)
+  where cg' = let' b (Bern (dCon 0.5)) (let' x (normal 0 1) (let' y (normal 0 1) j'))
+        j'  = Return (UpdHeight (lam z (ITE (SocPla i' @@ z) x y)) i')
+        i'  = UpdSocPla (lam x b) _0
+
+-- | Prior to be used for the likelihood example.
+likelihoodPrior :: Term
+likelihoodPrior = let' x (normal 0 1) (Return (UpdDTall x (upd_CG cg' ϵ)))
+  where cg' = let' y (normal 0 1) (let' w (LogitNormal 0 1) (let' b (Bern w) (Return (UpdHeight (lam z y) (UpdSocPla (lam z b) _0)))))
+
+-- | Respones function to be used for adjective examples.
+adjectivesRespond :: Term -> Term -> Term
+adjectivesRespond = respond (lam x (Normal x (Var "sigma")))

@@ -7,12 +7,17 @@ in
 }:
 let
   ghc = pkgs.haskellPackages.ghcWithPackages (ps: with ps; ([
-    cabal-install
+    base
+    containers
+    mtl
+    transformers
+    hspec
   ]));
 in
 pkgs.stdenv.mkDerivation {
   name = "my-env-0";
   buildInputs = [
+    pkgs.cabal-install
     ghc
   ];
   shellHook = ''

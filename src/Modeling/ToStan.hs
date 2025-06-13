@@ -45,18 +45,23 @@ data Error = TypeError deriving (Eq)
 instance Show Error where
   show TypeError = "Error: Term does not have type P r!"
 
+stanShow :: Term -> String
+stanShow v@(Var _) = show v
+stanShow x@(DCon _) = show x
+stanShow (NormalCDF x y z) = "normal_cdf(" ++ stanShow z ++ ", " ++ stanShow x ++ ", " ++ stanShow y ++ ")"
+
 lRender :: Var -> Term -> String
 lRender v (Truncate (Normal x y) z w) = "truncated_normal_lpdf(" ++ v ++
                                         " | " ++ show x ++ ", " ++ show y ++
                                         ", " ++ show z ++ ", " ++ show w ++ ")"
 lRender v (Normal x y) = "normal_lpdf(" ++ v ++
-                         " | " ++ show x ++ ", " ++ show y ++ ")"
-lRender v (Disj x y z) = "log_mix(" ++ show x ++ ", " ++ lRender v y ++ ", " ++ lRender v z ++ ")" 
+                         " | " ++ stanShow x ++ ", " ++ stanShow y ++ ")"
+lRender v (Disj x y z) = "log_mix(" ++ stanShow x ++ ", " ++ lRender v y ++ ", " ++ lRender v z ++ ")" 
 
 pRender :: Term -> String
-pRender (Normal x y) = "normal(" ++ show x ++ ", " ++ show y ++ ")"
-pRender (LogitNormal x y) = "logit_normal(" ++ show x ++ ", " ++ show y ++ ")"
-pRender (Truncate m x y) = pRender m ++ " T[" ++ show x ++ ", " ++ show y ++ "]"
+pRender (Normal x y) = "normal(" ++ stanShow x ++ ", " ++ stanShow y ++ ")"
+pRender (LogitNormal x y) = "logit_normal(" ++ stanShow x ++ ", " ++ stanShow y ++ ")"
+pRender (Truncate m x y) = pRender m ++ " T[" ++ stanShow x ++ ", " ++ stanShow y ++ "]"
 
 toStan :: Term -> Writer [Error] Model
 toStan = \case
@@ -91,4 +96,9 @@ s1'        = termOf $ getSemantics @Adjectives 1 ["jo", "is", "a", "soccer playe
 q1'        = termOf $ getSemantics @Adjectives 0 ["how", "tall", "jo", "is"]
 discourse' = ty tau $ assert s1' >>> ask q1'
 
-scaleNormingExample = asTyped tau (betaDeltaNormal deltaRules . scaleNormingRespond scaleNormingPrior) discourse'
+scaleNormingExample = asTyped tau (betaDeltaNormal deltaRules . adjectivesRespond scaleNormingPrior) discourse'
+
+q1''        = termOf $ getSemantics @Adjectives 0 ["how", "likely", "that", "jo", "is", "tall"]
+discourse'' = ty tau $ assert s1' >>> ask q1''
+
+likelihoodExample = asTyped tau (betaDeltaNormal deltaRules . adjectivesRespond likelihoodPrior) discourse''

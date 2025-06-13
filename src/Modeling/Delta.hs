@@ -95,14 +95,14 @@ indices = \case
   Epi    (UpdLing _ i)   -> Just (Epi i)
   Epi    (UpdSocPla _ i) -> Just (Epi i)
   Ling   (UpdLing p _)   -> Just p
-  Ling   (UpdEpi _  i)   -> Just (Tall i)
-  Ling   (UpdSocPla _ i) -> Just (Tall i)
+  Ling   (UpdEpi _ i)    -> Just (Ling i)
+  Ling   (UpdSocPla _ i) -> Just (Ling i)
+  Height (UpdHeight p _) -> Just p
+  Height (UpdSocPla _ i) -> Just (Height i)
   SocPla (UpdSocPla p _) -> Just p
-  SocPla (UpdTall _ i)   -> Just (SocPla i)
+  SocPla (UpdHeight _ i) -> Just (SocPla i)
   SocPla (UpdLing _ i)   -> Just (SocPla i)
   SocPla (UpdEpi _  i)   -> Just (SocPla i)
-  Tall   (UpdSocPla _ i) -> Just (Tall i)
-  Tall   (UpdTall p _)   -> Just p
   _                      -> Nothing
 
 -- | Computes /if then else/.
@@ -141,20 +141,27 @@ observations = \case
 -- | Computes probabilities for certain probabilitic programs.
 probabilities :: DeltaRule
 probabilities = \case
-  Pr (Return Tr)  -> Just 1
-  Pr (Return Fa)  -> Just 0
-  Pr (Bern x)     -> Just x
-  Pr (Disj x t u) -> Just (x * Pr t + (1 - x) * Pr u)
-  _               -> Nothing
+  Pr (Return Tr)                                             -> Just 1
+  Pr (Return Fa)                                             -> Just 0
+  Pr (Bern x)                                                -> Just x
+  Pr (Disj x t u)                                            -> Just (x * Pr t + (1 - x) * Pr u)
+  Pr (Let v (Normal x y) (Return (GE t (Var v')))) | v' == v -> Just (NormalCDF x y t)
+  Pr (Let v (Normal x y) (Return (GE (Var v') t))) | v' == v -> Just (NormalCDF (- x) y t)
+  _                                                          -> Nothing
 
 -- | Computes functions on states.
 states :: DeltaRule
 states = \case
   CG      (UpdCG cg _)     -> Just cg
+  CG      (UpdDTall _ s)   -> Just (CG s)
   CG      (UpdQUD _ s)     -> Just (CG s)
   CG      (UpdTauKnow _ s) -> Just (CG s)
+  DTall   (UpdDTall d _)   -> Just d
+  DTall   (UpdCG _ s)      -> Just (DTall s)
+  DTall   (UpdQUD _ s)     -> Just (DTall s)
   QUD     (UpdQUD q _)     -> Just q
   QUD     (UpdCG _ s)      -> Just (QUD s)
+  QUD     (UpdDTall _ s)   -> Just (QUD s)
   QUD     (UpdTauKnow _ s) -> Just (QUD s)
   TauKnow (UpdTauKnow b _) -> Just b
   TauKnow (UpdCG _ s)      -> Just (TauKnow s)

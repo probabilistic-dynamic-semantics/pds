@@ -62,10 +62,13 @@ tau = \case
   Left  "Bernoulli"    -> Just (r :→ P t)
   Left  "Beta"         -> Just (r :× r :→ P r)
   Left  "Normal"       -> Just (r :× r :→ P r)
+  Left  "Normal_cdf"   -> Just (r :× r :→ r :→ r)
   Left  "LogitNormal"  -> Just (r :× r :→ P r)
   Left  "Truncate"     -> Just (r :× r :→ P r :→ P r)
-  Left  "upd_tall"     -> Just ((e :→ r) :→ ι :→ ι)
-  Left  "tall"         -> Just (ι :→ e :→ r)
+  Left  "upd_height"   -> Just ((e :→ r) :→ ι :→ ι)
+  Left  "height"       -> Just (ι :→ e :→ r)
+  Left  "upd_d_tall"   -> Just (r :→ σ :→ σ)
+  Left  "d_tall"       -> Just (σ :→ r)
   Left  "(≥)"          -> Just (r :→ r :→ t)
   Left  "disj"         -> Just (r :→ P α :× P α :→ P α)
   Left  "mult"         -> Just (r :× r :→ r)
@@ -106,7 +109,7 @@ pattern Zero      = DCon 0
 pattern Tr        = SCon "T"
 pattern Undefined = SCon "#"
 
-pattern Bern, CG, Factor, Indi, Neg, Tall, Observe, Pr, Epi, SocPla :: Term -> Term
+pattern Bern, CG, Factor, Indi, Neg, Height, DTall, Observe, Pr, Epi, SocPla :: Term -> Term
 pattern Bern p    = SCon "Bernoulli" `App` p
 pattern CG s      = SCon "CG" `App` s
 pattern Factor x  = SCon "factor" `App` x
@@ -117,14 +120,15 @@ pattern Epi i     = SCon "epi" `App` i
 pattern TauKnow s = SCon "tau_know" `App` s
 pattern Ling i    = SCon "ling" `App` i
 pattern Phil i    = SCon "phil" `App` i
-pattern Tall i    = SCon "tall" `App` i
+pattern Height i  = SCon "height" `App` i
+pattern DTall s   = SCon "d_tall" `App` s
 pattern SocPla i  = SCon "soc_pla" `App` i
 pattern Observe p = SCon "observe" `App` p
 pattern Pr t      = SCon "Pr" `App` t
 pattern Prop1 i   = SCon "prop1" `App` i
 pattern QUD s     = SCon "QUD" `App` s
 
-pattern Add, And, Eq, GE, Mult, Normal, Or, UpdEpi, UpdCG, UpdTall, UpdSocPla, UpdProp1, UpdQUD :: Term -> Term -> Term
+pattern Add, And, Eq, GE, Mult, Normal, Or, UpdEpi, UpdCG, UpdHeight, UpdDTall, UpdSocPla, UpdProp1, UpdQUD :: Term -> Term -> Term
 pattern Add x y         = SCon "add" `App` (Pair x y)
 pattern And p q         = SCon "(∧)" `App` p `App` q
 pattern Or p q          = SCon "(∨)" `App` p `App` q
@@ -138,15 +142,19 @@ pattern UpdEpi acc i    = SCon "upd_epi" `App` acc `App` i
 pattern UpdCG cg s      = SCon "upd_CG" `App` cg `App` s
 pattern UpdLing p i     = SCon "upd_ling" `App` p `App` i
 pattern UpdTauKnow b s  = SCon "upd_tau_know" `App` b `App` s
-pattern UpdTall p i     = SCon "upd_tall" `App` p `App` i
+pattern UpdHeight p i   = SCon "upd_height" `App` p `App` i
+pattern UpdDTall d s    = SCon "upd_d_tall" `App` d `App` s
 pattern UpdSocPla p i   = SCon "upd_soc_pla" `App` p `App` i
 pattern UpdProp1 b i    = SCon "upd_prop1" `App` b `App` i
 pattern UpdQUD q s      = SCon "upd_QUD" `App` q ` App` s
 
 pattern Disj, ITE, Truncate :: Term -> Term -> Term -> Term
-pattern Disj x m n     = SCon "disj" `App` x `App` (Pair m n)
-pattern ITE p x y      = SCon "if_then_else" `App` p `App` (Pair x y)
-pattern Truncate m x y = SCon "Truncate" `App` (Pair x y) `App` m
+pattern Disj x m n      = SCon "disj" `App` x `App` (Pair m n)
+pattern ITE p x y       = SCon "if_then_else" `App` p `App` (Pair x y)
+pattern Truncate m x y  = SCon "Truncate" `App` (Pair x y) `App` m
+pattern NormalCDF x y z = SCon "Normal_cdf" `App` (Pair x y) `App` z
+
+pattern NormalCDF' v v' x y t = Pr (Let v (Normal x y) (Return (GE t (Var v'))))
 
 -- *** Convenience and smart constructors
 

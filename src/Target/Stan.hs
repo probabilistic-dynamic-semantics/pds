@@ -8,16 +8,16 @@
 {-# LANGUAGE TypeApplications #-}
 
 {-|
-Module      : Modeling.ToStan
-Description : CCG derivations
+Module      : Target.Stan
+Description : Exports probabilistic programs as Stan code.
 Copyright   : (c) Julian Grove and Aaron Steven White, 2025
 License     : MIT
 Maintainer  : julian.grove@gmail.com
 
-λ-terms are translated into Stan code.
+Probabilistic programs encoded as λ-terms are translated into Stan code.
 -}
 
-module Modeling.ToStan where
+module Target.Stan where
 
 import Control.Monad.Writer
 import Control.Monad.State
@@ -26,7 +26,6 @@ import Lambda
 import Grammar
 import Grammar.Lexica.SynSem.Adjectives
 import Grammar.Lexica.SynSem.Factivity
-import Modeling.Delta
 
 type Distr = String
 type Var   = String

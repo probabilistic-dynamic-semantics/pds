@@ -1,5 +1,5 @@
 :set -isrc -XDataKinds -XTypeApplications
-:load Grammar Grammar.CCG Grammar.Lexica.SynSem Grammar.Lexica.SynSem.Adjectives Grammar.Parser Lambda Lambda.Convenience Lambda.Terms Lambda.Types Modeling Modeling.Delta Modeling.ToStan
+:load Grammar Grammar.CCG Grammar.Lexica.SynSem Grammar.Lexica.SynSem.Adjectives Grammar.Parser Lambda Lambda.Convenience Lambda.Delta Lambda.Terms Lambda.Types Target Target.Stan
 
 import Grammar
 import Grammar.CCG
@@ -8,8 +8,8 @@ import Grammar.Lexica.SynSem.Adjectives
 import Grammar.Parser
 import Lambda
 import Lambda.Convenience
+import Lambda.Delta
 import Lambda.Terms
 import Lambda.Types
-import Modeling
-import Modeling.Delta
-import Modeling.ToStan
+import Target
+import Target.Stan

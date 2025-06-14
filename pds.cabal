@@ -2,7 +2,9 @@ cabal-version:       >=1.10
 name:                pds
 version:             0.1.0.0
 synopsis:            Code for Probabilistic Dynamic Semantics (PDS).
-description:         
+description:         Transform probabilistic semantic grammar fragments based on
+                     the λ-calculus into code for fitting probabilistic models
+                     of human inference judgment data.
 license:             MIT
 license-file:        LICENSE
 author:              Julian Grove and Aaron Steven White
@@ -15,6 +17,7 @@ library
                  , Grammar.CCG
                  , Grammar.Lexica.SynSem
                  , Grammar.Lexica.SynSem.Adjectives
+                 , Grammar.Lexica.SynSem.Convenience
                  , Grammar.Lexica.SynSem.Factivity
                  , Grammar.Parser
                  , Lambda
@@ -36,6 +39,7 @@ test-suite pds-test
   hs-source-dirs:      test
   main-is:             Spec.hs
   build-depends:       base
+                     , mtl
                      , pds
                      , hspec >= 2.0
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N

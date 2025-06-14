@@ -186,10 +186,10 @@ computeType tau t = do ty <- collectConstraints tau t
             -- are fresh (to prevent any potential clashes), and unify them with
             -- the original type variables.
             let newVars = take lng types'
-                rest = drop lng types'
-                types' = filter (`notElem` getVars cType) types
-                lng = length (getVars cType)
-                conCs = zip (TyVar <$> getVars cType) (TyVar <$> newVars)
+                rest    = drop lng types'
+                types'  = filter (`notElem` getVars cType) types
+                lng     = length (getVars cType)
+                conCs   = zip (TyVar <$> getVars cType) (TyVar <$> newVars)
             put (rest, f, cs)
             subst <- lift (unify conCs) 
             pure (applySubst subst cType)
@@ -258,6 +258,7 @@ computeType tau t = do ty <- collectConstraints tau t
           Return t -> do
             tType <- collectConstraints tau t
             pure (P tType)
+
         applySubst :: Constr -> Type -> Type
         applySubst s = \case
           a@(At _) -> a

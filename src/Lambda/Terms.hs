@@ -49,16 +49,16 @@ teVars = "" : map show ints >>= \i -> map (:i) ['u'..'z']
         ints = 1 : map succ ints
 
 -- | Untyped λ-terms. Types are assigned separately (i.e., "extrinsically").
-data Term = Var VarName          -- Variables.
-          | Con Constant         -- Constants.
-          | Lam String Term      -- Abstractions.
-          | App Term Term        -- Applications.
-          | TT                   -- The 0-tuple.
-          | Pair Term Term       -- Pairing.
-          | Pi1 Term             -- First projection.
-          | Pi2 Term             -- Second projection.
-          | Return Term          -- Construct a degenerate distribution.
-          | Let String Term Term -- Sample from a distribution and continue.
+data Term = Var VarName           -- Variables.
+          | Con Constant          -- Constants.
+          | Lam VarName Term      -- Abstractions.
+          | App Term Term         -- Applications.
+          | TT                    -- The 0-tuple.
+          | Pair Term Term        -- Pairing.
+          | Pi1 Term              -- First projection.
+          | Pi2 Term              -- Second projection.
+          | Return Term           -- Construct a degenerate distribution.
+          | Let VarName Term Term -- Sample from a distribution and continue.
 
 instance Eq Term where
   x == y = alphaEq teVars (x, y)
@@ -117,7 +117,7 @@ t & u = Pair t u
 
 -- *** Functions, relations on terms
 
-freeVars :: Term -> [String]
+freeVars :: Term -> [VarName]
 freeVars = \case
   Var v     -> [v]
   Con _     -> []
@@ -130,11 +130,11 @@ freeVars = \case
   Let v t u -> freeVars t ++ filter (/=v) (freeVars u)
   Return t  -> freeVars t
 
-fresh :: [Term] -> [String]
+fresh :: [Term] -> [VarName]
 fresh ts = filter (flip notElem (ts >>= freeVars)) teVars
 
 -- | Substitutions.
-subst :: String -> Term -> Term -> Term
+subst :: VarName -> Term -> Term -> Term
 subst x y = \case
   Var v     | v == x   -> y
   Var v     | v /= x   -> Var v

@@ -1,11 +1,4 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 {-|
 Module      : Target.Stan
@@ -25,12 +18,13 @@ import Data.Char                        (toLower)
 import Lambda
 import Grammar
 import Grammar.Lexica.SynSem.Adjectives
+-- import Grammar.Lexica.SynSem.Convenience
 import Grammar.Lexica.SynSem.Factivity
 
-type Distr = String
-type Var   = String
+type Distr   = String
+type VarName = String
 
-data Model = Model { statements :: [(Var, Distr)] } deriving (Eq)
+data Model = Model { statements :: [(VarName, Distr)] } deriving (Eq)
 
 instance Show Model where
   show (Model m) = "model {\n  // FIXED EFFECTS\n" ++ render m ++ "}"
@@ -49,7 +43,7 @@ stanShow v@(Var _) = show v
 stanShow x@(DCon _) = show x
 stanShow (NormalCDF x y z) = "normal_cdf(" ++ stanShow z ++ ", " ++ stanShow x ++ ", " ++ stanShow y ++ ")"
 
-lRender :: Var -> Term -> String
+lRender :: VarName -> Term -> String
 lRender v (Truncate (Normal x y) z w) = "truncated_normal_lpdf(" ++ v ++
                                         " | " ++ show x ++ ", " ++ show y ++
                                         ", " ++ show z ++ ", " ++ show w ++ ")"
@@ -77,27 +71,3 @@ toStan = \case
           toStan' result = pure $ Model [("", pRender result)]
   result   -> do
     pure (Model [("y", lRender "y" result)])
-
-getSemantics :: forall (p :: Project). Interpretation p SynSem => Int -> [String] -> Typed
-getSemantics n = sem . (indices !! n) . getList . flip (interpretations @p) 0
-  where indices = head : map (\f -> f . tail) indices
-stanOutput     = fst . runWriter . toStan . termOf
-
-deltaRules = arithmetic <||> indices <||> states <||> disjunctions <||> cleanUp <||> maxes <||> probabilities <||> logical <||> ite <||> observations
-  
-s1         = termOf $ getSemantics @Factivity 1 ["jo", "knows", "that", "bo", "is", "a", "linguist"] 
-q1         = termOf $ getSemantics @Factivity 1 ["how", "likely", "that", "bo", "is", "a", "linguist"]
-discourse  = ty tau $ assert s1 >>> ask q1
-
-factivityExample = asTyped tau (betaDeltaNormal deltaRules . factivityRespond factivityPrior) discourse
-
-s1'        = termOf $ getSemantics @Adjectives 1 ["jo", "is", "a", "soccer player"] 
-q1'        = termOf $ getSemantics @Adjectives 0 ["how", "tall", "jo", "is"]
-discourse' = ty tau $ assert s1' >>> ask q1'
-
-scaleNormingExample = asTyped tau (betaDeltaNormal deltaRules . adjectivesRespond scaleNormingPrior) discourse'
-
-q1''        = termOf $ getSemantics @Adjectives 0 ["how", "likely", "that", "jo", "is", "tall"]
-discourse'' = ty tau $ assert s1' >>> ask q1''
-
-likelihoodExample = asTyped tau (betaDeltaNormal deltaRules . adjectivesRespond likelihoodPrior) discourse''

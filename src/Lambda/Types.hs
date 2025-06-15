@@ -17,6 +17,7 @@ module Lambda.Types ( arity
                     , order
                     , Sig
                     , ty
+                    , tyEq
                     , Type(..)
                     , Typed(..)
                     , unify
@@ -24,6 +25,7 @@ module Lambda.Types ( arity
 
 import Control.Monad.State (evalStateT, get, lift, put, StateT)
 import Data.Char           (toLower)
+import Data.List           (nub)
 import Lambda.Terms
 
 --------------------------------------------------------------------------------
@@ -48,6 +50,17 @@ data Type = At Atom
           | TyVar String
   deriving (Eq)
 
+tyEq :: Type -> Type -> Bool
+tyEq α β = applySubst substα α == applySubst substβ β
+  where substα, substβ :: Constr
+        substα = zip (TyVar <$> αVars) (TyVar <$> newVars)
+        substβ = zip (TyVar <$> βVars) (TyVar <$> newVars)
+  
+        αVars, βVars, newVars :: TyVars
+        αVars = getVars α
+        βVars = getVars β
+        newVars = filter (flip notElem $ αVars ++ βVars) tyVars
+
 instance Show Type where
   show = \case
     At a                     -> map toLower $ show a
@@ -58,16 +71,15 @@ instance Show Type where
     a@(_ :→ _) :× b          -> "((" ++ show a ++ ") × " ++ show b ++ ")"
     a :× b@(_ :→ _)          -> "(" ++ show a ++ " × (" ++ show b ++ "))"
     a :× b                   -> show a ++ " × " ++ show b
-    P a@(_ :→ _)             -> "P (" ++ show a ++ ")"
-    P a@(_ :× _)             -> "P (" ++ show a ++ ")"
-    P a@(P _)                -> "P (" ++ show a ++ ")"
-    P a@(Q _ _ _)            -> "P (" ++ show a ++ ")"
-    P a                      -> "P " ++ show a
-    Q i q a                  -> "Q" ++
-                                drop 1 (show (P i)) ++
-                                drop 1 (show (P q)) ++
-                                drop 1 (show (P a))
+    P a                      -> "P" ++ wrap a
+    Q i q a                  -> "Q" ++ wrap i ++ wrap q ++ wrap a
     TyVar s                  -> s
+    where wrap :: Type -> String
+          wrap a@(_ :→ _)  = " (" ++ show a ++ ")"
+          wrap a@(_ :× _)  = " (" ++ show a ++ ")"
+          wrap a@(P _)     = " (" ++ show a ++ ")"
+          wrap a@(Q _ _ _) = " (" ++ show a ++ ")"
+          wrap a           = " "  ++ show a
 
 infixr 5 :→
 infixl 6 :×
@@ -86,6 +98,39 @@ order _         = 0
 -- | Lists of type equalities. We use these to find the most general unifier of
 -- two principal types.
 type Constr = [(Type, Type)]
+
+-- | Type variable names.
+tyVars :: TyVars
+tyVars = "" : map show ints >>= \i -> map (:i) ['α'..'ω']
+  where ints :: [Integer]
+        ints = 1 : map succ ints
+
+-- | Get the variable names that occur in some type.
+getVars :: Type -> TyVars
+getVars = nub . getVars'
+  where getVars' :: Type -> TyVars
+        getVars' (TyVar v) = [v]
+        getVars' (a :→ b)  = getVars' a ++ getVars' b
+        getVars' (a :× b)  = getVars' a ++ getVars' b
+        getVars' (P a)     = getVars' a
+        getVars' (Q i q a) = getVars' i ++ getVars' q ++ getVars' a
+        getVars' _         = []
+
+-- | Apply a substitution to a type, given a set of constraints.
+applySubst :: Constr -> Type -> Type
+applySubst s = \case
+  a@(At _) -> a
+  x :→ y   -> applySubst s x :→ applySubst s y
+  Unit     -> Unit
+  x :× y   -> applySubst s x :× applySubst s y
+  P x      -> P (applySubst s x)
+  Q x y z  -> Q (applySubst s x) (applySubst s y) (applySubst s z)
+  TyVar v  -> lookUp v s
+    where  lookUp :: String -> Constr -> Type
+           lookUp v  []                   = TyVar v
+           lookUp v1 ((TyVar v2, t) : s') = if   v2 == v1
+                                            then t
+                                            else lookUp v1 s'
 
 -- | Arrive at a most general unifier, or fail if none exists.
 unify :: Constr -> Maybe Constr
@@ -259,30 +304,6 @@ computeType tau t = do ty <- collectConstraints tau t
             tType <- collectConstraints tau t
             pure (P tType)
 
-        applySubst :: Constr -> Type -> Type
-        applySubst s = \case
-          a@(At _) -> a
-          x :→ y   -> applySubst s x :→ applySubst s y
-          Unit     -> Unit
-          x :× y   -> applySubst s x :× applySubst s y
-          P x      -> P (applySubst s x)
-          Q x y z  -> Q (applySubst s x) (applySubst s y) (applySubst s z)
-          TyVar v  -> lookUp v s
-
-        lookUp :: String -> Constr -> Type
-        lookUp v  []                   = TyVar v
-        lookUp v1 ((TyVar v2, t) : s') = if   v2 == v1
-                                         then t
-                                         else lookUp v1 s'
-
-        getVars :: Type -> TyVars
-        getVars (TyVar v) = [v]
-        getVars (a :→ b)  = getVars a ++ getVars b
-        getVars (a :× b)  = getVars a ++ getVars b
-        getVars (P a)     = getVars a
-        getVars (Q i q a) = getVars i ++ getVars q ++ getVars a
-        getVars _         = []
-
 -- | Typed terms (where not every term has a type).
 data Typed = Typed { termOf :: Term, typeOf :: Maybe Type } deriving (Eq)
 
@@ -295,12 +316,6 @@ ty :: Sig -> Term -> Typed
 ty tau te = Typed te theType
     where theType :: Maybe Type
           theType = evalStateT (computeType tau te) (tyVars, start, empty)
-
-          tyVars :: TyVars
-          tyVars = "" : map show ints >>= \i -> map (:i) ['α'..'ω']
-
-          ints :: [Integer]
-          ints = 1 : map succ ints
 
           start :: VarTyping
           start = const Nothing

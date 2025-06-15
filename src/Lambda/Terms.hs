@@ -43,6 +43,7 @@ type Constant = Either String Double
 -- | Variable names are represented by strings.
 type VarName = String
 
+-- | Variable names.
 teVars :: [VarName]
 teVars = "" : map show ints >>= \i -> map (:i) ['u'..'z']
   where ints :: [Integer]

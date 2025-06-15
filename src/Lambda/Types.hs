@@ -50,6 +50,7 @@ data Type = At Atom
           | TyVar String
   deriving (Eq)
 
+-- | Determine if two types are semantically equivalent.
 tyEq :: Type -> Type -> Bool
 tyEq α β = applySubst substα α == applySubst substβ β
   where substα, substβ :: Constr

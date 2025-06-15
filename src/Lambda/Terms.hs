@@ -137,19 +137,19 @@ fresh ts = filter (flip notElem (ts >>= freeVars)) teVars
 -- | Substitutions.
 subst :: VarName -> Term -> Term -> Term
 subst x y = \case
-  Var v     | v == x   -> y
-  Var v     | v /= x   -> Var v
-  c@(Con _)            -> c
-  Lam v t   | v == x   -> Lam v t
-  Lam v t   | v /= x   -> Lam fr (subst x y (subst v (Var fr) t))
+  Var v     | v == x -> y
+  Var v     | v /= x -> Var v
+  c@(Con _)          -> c
+  Lam v t   | v == x -> Lam v t
+  Lam v t   | v /= x -> Lam fr (subst x y (subst v (Var fr) t))
     where fr:esh = fresh [t, y, Var x]
-  App t u              -> subst x y t @@ subst x y u
-  TT                   -> TT
-  Pair t u             -> subst x y t & subst x y u
-  Pi1 t                -> Pi1 (subst x y t)
-  Pi2 t                -> Pi2 (subst x y t)
-  Return t             -> Return (subst x y t)
-  Let v t u            -> Let fr (subst x y t) (subst x y (subst v (Var fr) u))
+  App t u            -> subst x y t @@ subst x y u
+  TT                 -> TT
+  Pair t u           -> subst x y t & subst x y u
+  Pi1 t              -> Pi1 (subst x y t)
+  Pi2 t              -> Pi2 (subst x y t)
+  Return t           -> Return (subst x y t)
+  Let v t u          -> Let fr (subst x y t) (subst x y (subst v (Var fr) u))
     where fr:esh = fresh [u, y, Var x]
 
 -- | The type of Delta rules.
@@ -162,8 +162,8 @@ betaDeltaNormal delta = continue . \case
         c@(Con _) -> c
         Lam v t   -> Lam v (bdnd t)
         App t u   -> case bdnd t of
-          Lam v t' -> bdnd (subst v u t')
-          t'       -> App t' (bdnd u)
+                       Lam v t' -> bdnd (subst v u t')
+                       t'       -> App t' (bdnd u)
         TT        -> TT
         Pair t u  -> Pair (bdnd t) (bdnd u)
         Pi1 t     -> case bdnd t of
@@ -186,8 +186,7 @@ betaDeltaNormal delta = continue . \case
                        Nothing -> t
 
         bdnd :: Term -> Term
-        bdnd = betaDeltaNormal delta
-        
+        bdnd = betaDeltaNormal delta       
   
 -- | Beta normal forms.
 betaNormal :: Term -> Term

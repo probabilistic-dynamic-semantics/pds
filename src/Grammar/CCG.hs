@@ -1,11 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE PatternSynonyms #-}
 
 {-|
 Module      : Grammar.CCG
@@ -20,12 +16,6 @@ are typed.
 
 module Grammar.CCG where
 
-import           Data.Bifunctor
-import           Data.List
-import           Data.Maybe                         (maybeToList)
-import           Control.Monad
-import           Control.Monad.State
-import qualified Data.Map            as Map
 import           Prelude             as Prel hiding (Word)
 import           Lambda                             (Typed)
 

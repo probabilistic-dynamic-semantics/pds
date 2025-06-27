@@ -2,7 +2,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 
 {-|
-Module      : Lambda.Convenience
+Module      : Framework.Lambda.Convenience
 Description : Convenience functions, etc.
 Copyright   : (c) Julian Grove and Aaron Steven White, 2025
 License     : MIT
@@ -11,10 +11,10 @@ Maintainer  : julian.grove@gmail.com
 Convenience functions, smart constructors, etc.
 -}
 
-module Lambda.Convenience where
+module Framework.Lambda.Convenience where
 
-import Lambda.Terms
-import Lambda.Types
+import Framework.Lambda.Terms
+import Framework.Lambda.Types
 
 --------------------------------------------------------------------------------
 -- * Convenience functions, smart constructors, etc.
@@ -28,9 +28,9 @@ import Lambda.Types
 ω = TyVar "ω"
 κ = TyVar "κ"
 σ = TyVar "σ"
-e = At E 
-t = At T
-r = At R
+e = Atom "e" 
+t = Atom "t"
+r = Atom "r"
 
 -- ** Signatures
 
@@ -159,22 +159,22 @@ pattern NormalCDF' v v' x y t = Pr (Let v (Normal x y) (Return (GE t (Var v'))))
 -- *** Convenience and smart constructors
 
 getPP, a, b, c, d, i, k, m, n, p, s, u, v, w, x, y, z, _' :: Term
-a = Var "a"
-b = Var "b"
-c = Var "c"
-d = Var "d"
-i = Var "i"
-k = Var "k"
-m = Var "m"
-n = Var "n"
-p = Var "p"
-s = Var "s"
-u = Var "u"
-v = Var "v"
-w = Var "w"
-x = Var "x"
-y = Var "y"
-z = Var "z"
+a  = Var "a"
+b  = Var "b"
+c  = Var "c"
+d  = Var "d"
+i  = Var "i"
+k  = Var "k"
+m  = Var "m"
+n  = Var "n"
+p  = Var "p"
+s  = Var "s"
+u  = Var "u"
+v  = Var "v"
+w  = Var "w"
+x  = Var "x"
+y  = Var "y"
+z  = Var "z"
 _' = Var "_"
 
 _0, ϵ, prop1, prop2 :: Term

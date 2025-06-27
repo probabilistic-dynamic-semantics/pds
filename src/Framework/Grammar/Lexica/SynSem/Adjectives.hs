@@ -3,19 +3,19 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 
 {-|
-Module      : Grammar.Lexica.SynSem
+Module      : Framework.Grammar.Lexica.SynSem
 Description : Adjectives lexicon.
 Copyright   : (c) Julian Grove and Aaron Steven White, 2025
 License     : MIT
 Maintainer  : julian.grove@gmail.com
 -}
 
-module Grammar.Lexica.SynSem.Adjectives where
+module Framework.Grammar.Lexica.SynSem.Adjectives where
 
-import Grammar.CCG
-import Grammar.Lexica.SynSem
-import Grammar.Lexica.SynSem.Convenience as Convenience
-import Lambda
+import Framework.Grammar.CCG
+import Framework.Grammar.Lexica.SynSem
+import Framework.Grammar.Lexica.SynSem.Convenience as Convenience
+import Framework.Lambda
 
 --------------------------------------------------------------------------------
 -- * Lexica for adjectives

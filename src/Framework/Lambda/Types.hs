@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 
 {-|
-Module      : Lambda.Types
+Module      : Framework.Lambda.Types
 Description : Curry typing with probabilistic types.
 Copyright   : (c) Julian Grove and Aaron Steven White, 2025
 License     : MIT
@@ -11,20 +11,19 @@ Types and type inference are defined. Types feature variables, quantified at the
 top level for some limited polymorphism. Constants may also be polymorphic.
 -}
 
-module Lambda.Types ( arity
-                    , asTyped
-                    , Atom(..)
-                    , order
-                    , Sig
-                    , ty
-                    , Type(..)
-                    , Typed(..)
-                    , unify
-                    ) where
+module Framework.Lambda.Types ( arity
+                              , asTyped
+                              , order
+                              , Sig
+                              , ty
+                              , Type(..)
+                              , Typed(..)
+                              , unify
+                              ) where
 
-import Control.Monad.State (evalStateT, get, lift, put, StateT)
-import Data.Char           (toLower)
-import Lambda.Terms
+import Control.Monad.State    (evalStateT, get, lift, put, StateT)
+import Data.Char              (toLower)
+import Framework.Lambda.Terms
 
 --------------------------------------------------------------------------------
 -- * Types and type inference
@@ -33,13 +32,10 @@ import Lambda.Terms
 
 -- *** Definitions
 
--- | Atomic types for entities, truth values, and real numbers.
-data Atom = E | T | R deriving (Eq, Show)
-
 -- | Arrows, products, and probabilistic types, as well as (a) abstract types
 -- representing the addition of a new Q, and (b) type variables for encoding
 -- polymorphism.
-data Type = At Atom
+data Type = Atom String
           | Type :→ Type
           | Unit
           | Type :× Type
@@ -50,7 +46,7 @@ data Type = At Atom
 
 instance Show Type where
   show = \case
-    At a                     -> map toLower $ show a
+    Atom a                   -> map toLower $ show a
     (a@(_ :→ _) :→ b)        -> "(" ++ show a ++ ") → " ++ show b
     (a :→ b)                 -> show a ++ " → " ++ show b
     Unit                     -> "⋄"
@@ -58,16 +54,15 @@ instance Show Type where
     a@(_ :→ _) :× b          -> "((" ++ show a ++ ") × " ++ show b ++ ")"
     a :× b@(_ :→ _)          -> "(" ++ show a ++ " × (" ++ show b ++ "))"
     a :× b                   -> show a ++ " × " ++ show b
-    P a@(_ :→ _)             -> "P (" ++ show a ++ ")"
-    P a@(_ :× _)             -> "P (" ++ show a ++ ")"
-    P a@(P _)                -> "P (" ++ show a ++ ")"
-    P a@(Q _ _ _)            -> "P (" ++ show a ++ ")"
-    P a                      -> "P " ++ show a
-    Q i q a                  -> "Q" ++
-                                drop 1 (show (P i)) ++
-                                drop 1 (show (P q)) ++
-                                drop 1 (show (P a))
+    P a                      -> "P" ++ wrap a
+    Q i q a                  -> "Q" ++ wrap i ++ wrap q ++ wrap a
     TyVar s                  -> s
+    where wrap :: Type -> String
+          wrap a@(_ :→ _)  = " (" ++ show a ++ ")"
+          wrap a@(_ :× _)  = " (" ++ show a ++ ")"
+          wrap a@(P _)     = " (" ++ show a ++ ")"
+          wrap a@(Q _ _ _) = " (" ++ show a ++ ")"
+          wrap a           = " "  ++ show a
 
 infixr 5 :→
 infixl 6 :×
@@ -109,7 +104,7 @@ unify cs = do
       eq@(x@(TyVar _), y)              -> Just ( map (substEqs x y) u1 ++ [eq]
                                                , map (substEqs x y) u2 ) -- Substitute.
       (x, TyVar y)                     -> Just (u1 ++ [(TyVar y, x)], u2) -- Swap.
-      (At _, _)                        -> Nothing -- We've already handled equalities.
+      (Atom _, _)                        -> Nothing -- We've already handled equalities.
       (x :→ y, z :→ w)                 -> Just (u1 ++ [(x, z), (y, w)], u2) -- Break apart arrows.
       (_ :→ _, _)                      -> Nothing -- No mismatches allowed.
       (Unit, _)                        -> Nothing -- No mismatches allowed.
@@ -261,13 +256,13 @@ computeType tau t = do ty <- collectConstraints tau t
 
         applySubst :: Constr -> Type -> Type
         applySubst s = \case
-          a@(At _) -> a
-          x :→ y   -> applySubst s x :→ applySubst s y
-          Unit     -> Unit
-          x :× y   -> applySubst s x :× applySubst s y
-          P x      -> P (applySubst s x)
-          Q x y z  -> Q (applySubst s x) (applySubst s y) (applySubst s z)
-          TyVar v  -> lookUp v s
+          a@(Atom _) -> a
+          x :→ y     -> applySubst s x :→ applySubst s y
+          Unit       -> Unit
+          x :× y     -> applySubst s x :× applySubst s y
+          P x        -> P (applySubst s x)
+          Q x y z    -> Q (applySubst s x) (applySubst s y) (applySubst s z)
+          TyVar v    -> lookUp v s
 
         lookUp :: String -> Constr -> Type
         lookUp v  []                   = TyVar v

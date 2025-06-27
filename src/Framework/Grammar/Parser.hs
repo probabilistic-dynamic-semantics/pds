@@ -9,7 +9,7 @@
 {-# LANGUAGE TypeApplications #-}
 
 {-|
-Module      : Grammar.Parser
+Module      : Framework.Grammar.Parser
 Description : CCG parsing, CKY-style (ish).
 Copyright   : (c) Julian Grove and Aaron Steven White, 2025
 License     : MIT
@@ -18,7 +18,7 @@ Maintainer  : julian.grove@gmail.com
 CKY-style parsing for CCG.
 -}
 
-module Grammar.Parser ( forParse
+module Framework.Grammar.Parser ( forParse
                       , interpret
                       , interpretations
                       , ParseAs(..)
@@ -29,7 +29,7 @@ import           Control.Monad.State
 import           Data.List
 import qualified Data.Map            as Map
 import           Data.Maybe                         (maybeToList)
-import           Grammar.CCG
+import           Framework.Grammar.CCG
 import           Lambda
 import           Prelude             as Prel hiding (Word)
 

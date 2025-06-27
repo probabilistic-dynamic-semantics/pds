@@ -38,6 +38,14 @@ instance Interpretation Adjectives SynSem where
                                    syn = N,
                                    sem = ty tau (purePP (lam x (lam i (phil i @@ x))))
                                    } ]
+            "full"          -> [ SynSem {
+                                   syn = AP :\: Deg,
+                                   sem = ty tau (purePP (lam d (lam x (lam i (sCon "(≥)" @@ (sCon "height" @@ i @@ x) @@ d)))))
+                                   }
+                               , SynSem {
+                                   syn = AP,
+                                   sem = ty tau (lam s (purePP (lam x (lam i (sCon "(≥)" @@ (sCon "height" @@ i @@ x) @@ (sCon "d_tall" @@ s)))) @@ s))
+                                        } ]
             "tall"          -> [ SynSem {
                                    syn = AP :\: Deg,
                                    sem = ty tau (purePP (lam d (lam x (lam i (sCon "(≥)" @@ (sCon "height" @@ i @@ x) @@ d)))))
@@ -154,6 +162,11 @@ scaleNormingPrior = Return (upd_CG cg' ϵ)
 -- | Prior to be used for the likelihood example.
 likelihoodPrior :: Term
 likelihoodPrior = let' x (normal 0 1) (Return (UpdDTall x (upd_CG cg' ϵ)))
+  where cg' = let' y (normal 0 1) (let' w (LogitNormal 0 1) (let' b (Bern w) (Return (UpdHeight (lam z y) (UpdSocPla (lam z b) _0)))))
+
+-- | Prior to be used for the likelihood example for relative adjectives (/tall/).
+likelihoodPriorRelative :: Term
+likelihoodPriorRelative = let' x (normal 0 1) (let' y (normal 0 1) (Return (UpdDTall x (upd_CG cg' ϵ))))
   where cg' = let' y (normal 0 1) (let' w (LogitNormal 0 1) (let' b (Bern w) (Return (UpdHeight (lam z y) (UpdSocPla (lam z b) _0)))))
 
 -- | Respones function to be used for adjective examples.

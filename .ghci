@@ -1,15 +1,17 @@
 :set -isrc -XDataKinds -XTypeApplications
-:load Grammar Grammar.CCG Grammar.Lexica.SynSem Grammar.Lexica.SynSem.Adjectives Grammar.Parser Lambda Lambda.Convenience Lambda.Delta Lambda.Terms Lambda.Types Target Target.Stan
+:load Analysis.Adjectives.Adjectives Analysis.Factivity.Factivity Framework.Grammar Framework.Grammar.CCG Framework.Grammar.Lexica.SynSem Framework.Grammar.Parser Framework.Lambda Framework.Lambda.Convenience Framework.Lambda.Delta Framework.Lambda.Terms Framework.Lambda.Types Framework.Target Framework.Target.Stan
 
-import Grammar
-import Grammar.CCG
-import Grammar.Lexica.SynSem
-import Grammar.Lexica.SynSem.Adjectives
-import Grammar.Parser
-import Lambda
-import Lambda.Convenience
-import Lambda.Delta
-import Lambda.Terms
-import Lambda.Types
-import Target
-import Target.Stan
+
+import Analysis.Adjectives.Adjectives
+import Analysis.Factivity.Factivity
+import Framework.Grammar
+import Framework.Grammar.CCG
+import Framework.Grammar.Lexica.SynSem
+import Framework.Grammar.Parser
+import Framework.Lambda
+import Framework.Lambda.Convenience
+import Framework.Lambda.Delta
+import Framework.Lambda.Terms
+import Framework.Lambda.Types
+import Framework.Target
+import Framework.Target.Stan

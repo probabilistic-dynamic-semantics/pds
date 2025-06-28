@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 
 {-|
-Module      : Target.Stan
+Module      : Framework.Target.Stan
 Description : Exports probabilistic programs as Stan code.
 Copyright   : (c) Julian Grove and Aaron Steven White, 2025
 License     : MIT
@@ -10,16 +10,15 @@ Maintainer  : julian.grove@gmail.com
 Probabilistic programs encoded as λ-terms are translated into Stan code.
 -}
 
-module Target.Stan where
+module Framework.Target.Stan where
 
+import Analysis.Adjectives.Adjectives
+import Analysis.Factivity.Factivity
 import Control.Monad.Writer
 import Control.Monad.State
 import Data.Char                        (toLower)
-import Lambda
-import Grammar
-import Grammar.Lexica.SynSem.Adjectives
--- import Grammar.Lexica.SynSem.Convenience
-import Grammar.Lexica.SynSem.Factivity
+import Framework.Lambda
+import Framework.Grammar
 
 type Distr   = String
 type VarName = String
@@ -58,7 +57,7 @@ pRender (Truncate m x y) = pRender m ++ " T[" ++ stanShow x ++ ", " ++ stanShow 
 
 toStan :: Term -> Writer [Error] Model
 toStan = \case
-  t         | typeOf (ty tau t) /= Just (P (At R)) -> do
+  t         | typeOf (ty tau t) /= Just (P (Atom "r")) -> do
       tell [TypeError]
       pure (Model [])
   t@(Let x y z) -> toStan' t

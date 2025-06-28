@@ -13,12 +13,12 @@ copyright:           2025
 build-type:          Simple
 
 library 
-  exposed-modules: Framework.Grammar
+  exposed-modules: Analysis.Adjectives.Adjectives
+                 , Analysis.Factivity.Factivity
+                 , Framework.Grammar
                  , Framework.Grammar.CCG
                  , Framework.Grammar.Lexica.SynSem
-                 , Framework.Grammar.Lexica.SynSem.Adjectives
                  , Framework.Grammar.Lexica.SynSem.Convenience
-                 , Framework.Grammar.Lexica.SynSem.Factivity
                  , Framework.Grammar.Parser
                  , Framework.Lambda
                  , Framework.Lambda.Convenience

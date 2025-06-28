@@ -19,19 +19,19 @@ CKY-style parsing for CCG.
 -}
 
 module Framework.Grammar.Parser ( forParse
-                      , interpret
-                      , interpretations
-                      , ParseAs(..)
-                      ) where
+                                , interpret
+                                , interpretations
+                                , ParseAs(..)
+                                ) where
 
 import           Control.Monad
 import           Control.Monad.State
 import           Data.List
-import qualified Data.Map            as Map
-import           Data.Maybe                         (maybeToList)
+import qualified Data.Map              as Map
+import           Data.Maybe                           (maybeToList)
 import           Framework.Grammar.CCG
-import           Lambda
-import           Prelude             as Prel hiding (Word)
+import           Framework.Lambda
+import           Prelude               as Prel hiding (Word)
 
 --------------------------------------------------------------------------------
 -- * Interface-agnostic CCG parsing

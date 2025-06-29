@@ -1,18 +1,18 @@
 {-# LANGUAGE LambdaCase #-}
 
 {-|
-Module      : Grammar.Lexica.SynSem.Convenience
+Module      : Framework.Grammar.Lexica.SynSem.Convenience
 Description : Some convenience functions.
 Copyright   : (c) Julian Grove and Aaron Steven White, 2025
 License     : MIT
 Maintainer  : julian.grove@gmail.com
 -}
 
-module Grammar.Lexica.SynSem.Convenience where
+module Framework.Grammar.Lexica.SynSem.Convenience where
 
-import Grammar.CCG
-import Grammar.Lexica.SynSem
-import Lambda
+import Framework.Grammar.CCG
+import Framework.Grammar.Lexica.SynSem
+import Framework.Lambda
 
 --------------------------------------------------------------------------------
 -- * Some convenience functions

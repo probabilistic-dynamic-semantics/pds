@@ -1,17 +1,17 @@
 {-# LANGUAGE LambdaCase #-}
 
 {-|
-Module      : Grammar.Lexica.SynSem
+Module      : Framework.Grammar.Lexica.SynSem
 Description : Components for defining CCG lexica with catogories and λ-terms.
 Copyright   : (c) Julian Grove and Aaron Steven White, 2025
 License     : MIT
 Maintainer  : julian.grove@gmail.com
 -}
 
-module Grammar.Lexica.SynSem where
+module Framework.Grammar.Lexica.SynSem where
 
-import Grammar.CCG
-import Lambda
+import Framework.Grammar.CCG
+import Framework.Lambda
 
 --------------------------------------------------------------------------------
 -- * Lexica with syntax and semantics

@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 
 {-|
-Module      : Lambda.Types
+Module      : Framework.Lambda.Types
 Description : Curry typing with probabilistic types.
 Copyright   : (c) Julian Grove and Aaron Steven White, 2025
 License     : MIT
@@ -11,20 +11,20 @@ Types and type inference are defined. Types feature variables, quantified at the
 top level for some limited polymorphism. Constants may also be polymorphic.
 -}
 
-module Lambda.Types ( arity
-                    , asTyped
-                    , Atom(..)
-                    , order
-                    , Sig
-                    , ty
-                    , Type(..)
-                    , Typed(..)
-                    , unify
-                    ) where
+module Framework.Lambda.Types ( arity
+                              , asTyped
+                              , order
+                              , Sig
+                              , ty
+                              , Type(..)
+                              , Typed(..)
+                              , unify
+                              ) where
 
-import Control.Monad.State (evalStateT, get, lift, put, StateT)
-import Data.Char           (toLower)
-import Lambda.Terms
+import Control.Monad.State    (evalStateT, get, lift, put, StateT)
+import Data.Char              (toLower)
+import Data.List              (nub)
+import Framework.Lambda.Terms
 
 --------------------------------------------------------------------------------
 -- * Types and type inference
@@ -33,24 +33,32 @@ import Lambda.Terms
 
 -- *** Definitions
 
--- | Atomic types for entities, truth values, and real numbers.
-data Atom = E | T | R deriving (Eq, Show)
-
--- | Arrows, products, and probabilistic types, as well as (a) abstract types
--- representing the addition of a new Q, and (b) type variables for encoding
--- polymorphism.
-data Type = At Atom
+-- | Arrows, products, and probabilistic types, as well as (a) abstract type
+-- constructors, and (b) type variables for encoding polymorphism.
+data Type = Atom String
           | Type :→ Type
           | Unit
           | Type :× Type
           | P Type
-          | Q Type Type Type
+          | TyCon String [Type]
           | TyVar String
   deriving (Eq)
 
+-- | Determine if two types are semantically equivalent.
+tyEq :: Type -> Type -> Bool
+tyEq α β = applySubst substα α == applySubst substβ β
+  where substα, substβ :: Constr
+        substα = zip (TyVar <$> αVars) (TyVar <$> newVars)
+        substβ = zip (TyVar <$> βVars) (TyVar <$> newVars)
+  
+        αVars, βVars, newVars :: TyVars
+        αVars = getVars α
+        βVars = getVars β
+        newVars = filter (flip notElem $ αVars ++ βVars) tyVars
+
 instance Show Type where
   show = \case
-    At a                     -> map toLower $ show a
+    Atom a                   -> a
     (a@(_ :→ _) :→ b)        -> "(" ++ show a ++ ") → " ++ show b
     (a :→ b)                 -> show a ++ " → " ++ show b
     Unit                     -> "⋄"
@@ -58,34 +66,50 @@ instance Show Type where
     a@(_ :→ _) :× b          -> "((" ++ show a ++ ") × " ++ show b ++ ")"
     a :× b@(_ :→ _)          -> "(" ++ show a ++ " × (" ++ show b ++ "))"
     a :× b                   -> show a ++ " × " ++ show b
-    P a@(_ :→ _)             -> "P (" ++ show a ++ ")"
-    P a@(_ :× _)             -> "P (" ++ show a ++ ")"
-    P a@(P _)                -> "P (" ++ show a ++ ")"
-    P a@(Q _ _ _)            -> "P (" ++ show a ++ ")"
-    P a                      -> "P " ++ show a
-    Q i q a                  -> "Q" ++
-                                drop 1 (show (P i)) ++
-                                drop 1 (show (P q)) ++
-                                drop 1 (show (P a))
+    P a                      -> "P" ++ wrap a
+    TyCon f tys              -> f ++ concatMap wrap tys
     TyVar s                  -> s
+    where wrap :: Type -> String
+          wrap a@(_ :→ _)    = " (" ++ show a ++ ")"
+          wrap a@(_ :× _)    = " (" ++ show a ++ ")"
+          wrap a@(P _)       = " (" ++ show a ++ ")"
+          wrap a@(TyCon _ _) = " (" ++ show a ++ ")"
+          wrap a             = " "  ++ show a
 
 infixr 5 :→
 infixl 6 :×
 
 arity, order :: Type -> Int
-arity (a :→ b)  = arity b + 1
-arity _         = 0
-order (a :→ b)  = max (order a + 1) (order b)
-order (a :× b)  = max (order a) (order b)
-order (P a)     = order a
-order (Q i q a) = maximum [order i, order q, order a]
-order _         = 0
+arity (a :→ b)      = arity b + 1
+arity _             = 0
+order (a :→ b)      = max (order a + 1) (order b)
+order (a :× b)      = max (order a) (order b)
+order (P a)         = order a
+order (TyCon _ tys) = maximum (map order tys)
+order _             = 0
   
 -- *** Type inference
   
 -- | Lists of type equalities. We use these to find the most general unifier of
 -- two principal types.
 type Constr = [(Type, Type)]
+
+-- | Type variable fs.
+tyVars :: TyVars
+tyVars = "" : map show ints >>= \i -> map (:i) ['α'..'ω']
+  where ints :: [Integer]
+        ints = 1 : map succ ints
+
+-- | Get the variable fs that occur in some type.
+getVars :: Type -> TyVars
+getVars = nub . getVars'
+  where getVars' :: Type -> TyVars
+        getVars' (TyVar v)     = [v]
+        getVars' (a :→ b)      = getVars' a ++ getVars' b
+        getVars' (a :× b)      = getVars' a ++ getVars' b
+        getVars' (P a)         = getVars' a
+        getVars' (TyCon _ tys) = concatMap getVars' tys
+        getVars' _             = []
 
 -- | Arrive at a most general unifier, or fail if none exists.
 unify :: Constr -> Maybe Constr
@@ -105,11 +129,11 @@ unify cs = do
     step :: (Constr, Constr) -> (Type, Type) -> Maybe (Constr, Constr)
     step (u1, u2) = \case
       (x, y)              | x == y     -> Just (u1, u2) -- Get rid of trivial equalities.
-      (x@(TyVar _), y)    | occurs x y -> Nothing       -- Impredicativity; uh oh!
+      (x@(TyVar _), y)    | occurs x y -> Nothing -- Impredicativity; uh oh!
       eq@(x@(TyVar _), y)              -> Just ( map (substEqs x y) u1 ++ [eq]
                                                , map (substEqs x y) u2 ) -- Substitute.
       (x, TyVar y)                     -> Just (u1 ++ [(TyVar y, x)], u2) -- Swap.
-      (At _, _)                        -> Nothing -- We've already handled equalities.
+      (Atom _, _)                      -> Nothing -- We've already handled equalities.
       (x :→ y, z :→ w)                 -> Just (u1 ++ [(x, z), (y, w)], u2) -- Break apart arrows.
       (_ :→ _, _)                      -> Nothing -- No mismatches allowed.
       (Unit, _)                        -> Nothing -- No mismatches allowed.
@@ -117,8 +141,11 @@ unify cs = do
       (_ :× _, _)                      -> Nothing -- No mismatches allowed.
       (P x, P y)                       -> Just (u1 ++ [(x, y)], u2) -- Break apart @P@.
       (P _, _)                         -> Nothing -- No mismatches allowed.
-      (Q i q x, Q j r y)               -> Just (u1 ++ [(i, j), (q, r), (x, y)], u2) -- Break apart @Q@.
-      (Q _ _ _, _)                     -> Nothing -- No mismatches allowed.
+      (TyCon f tys1
+        , TyCon g tys2)  | f == g &&
+                           length tys1 ==
+                           length tys2 -> Just (u1 ++ zip tys1 tys2, u2) -- Break apart @TyCon@.
+      (TyCon _ _, _)                   -> Nothing -- No mismatches allowed.
 
     -- | Substitute inside equalities.
     substEqs :: Type -> Type -> (Type, Type) -> (Type, Type)
@@ -126,21 +153,21 @@ unify cs = do
 
     -- | Substitute inside a type.
     substType :: Type -> Type -> Type -> Type
-    substType x y z | z == x = y
-    substType x y (z1 :→ z2) = substType x y z1 :→ substType x y z2
-    substType x y (z1 :× z2) = substType x y z1 :× substType x y z2
-    substType x y (P z)      = P (substType x y z)
-    substType x y (Q i q z)  = Q (substType x y i) (substType x y q) (substType x y z)
-    substType _ _ z          = z
+    substType x y z             | z == x = y
+    substType x y (z1 :→ z2)             = substType x y z1 :→ substType x y z2
+    substType x y (z1 :× z2)             = substType x y z1 :× substType x y z2
+    substType x y (P z)                  = P (substType x y z)
+    substType x y (TyCon f tys)          = TyCon f (map (substType x y) tys)
+    substType _ _ z                      = z
 
     -- | Does @x@ occur in @y@?
     occurs :: Type -> Type -> Bool
     occurs x = \case -- List out possible @y@s.
-      y :→ z  -> occurs x y || occurs x z
-      y :× z  -> occurs x y || occurs x z
-      P y     -> occurs x y
-      Q i q y -> occurs x i || occurs x q || occurs x y
-      y       -> x == y -- The "otherwise" case; namely, @At@, @Unit@, and @TyVar@.
+      y :→ z      -> occurs x y || occurs x z
+      y :× z      -> occurs x y || occurs x z
+      P y         -> occurs x y
+      TyCon _ tys -> or (map (occurs x) tys)
+      y           -> x == y -- The "otherwise" case; fly, @At@, @Unit@, and @TyVar@.
 
 -- | Assign types to constants.
 type Sig = Constant -> Maybe Type
@@ -259,29 +286,21 @@ computeType tau t = do ty <- collectConstraints tau t
             tType <- collectConstraints tau t
             pure (P tType)
 
-        applySubst :: Constr -> Type -> Type
-        applySubst s = \case
-          a@(At _) -> a
-          x :→ y   -> applySubst s x :→ applySubst s y
-          Unit     -> Unit
-          x :× y   -> applySubst s x :× applySubst s y
-          P x      -> P (applySubst s x)
-          Q x y z  -> Q (applySubst s x) (applySubst s y) (applySubst s z)
-          TyVar v  -> lookUp v s
-
-        lookUp :: String -> Constr -> Type
-        lookUp v  []                   = TyVar v
-        lookUp v1 ((TyVar v2, t) : s') = if   v2 == v1
-                                         then t
-                                         else lookUp v1 s'
-
-        getVars :: Type -> TyVars
-        getVars (TyVar v) = [v]
-        getVars (a :→ b)  = getVars a ++ getVars b
-        getVars (a :× b)  = getVars a ++ getVars b
-        getVars (P a)     = getVars a
-        getVars (Q i q a) = getVars i ++ getVars q ++ getVars a
-        getVars _         = []
+-- | Apply a substitution to a type, given a set of constraints.
+applySubst :: Constr -> Type -> Type
+applySubst s = \case
+  a@(Atom _)  -> a
+  x :→ y      -> applySubst s x :→ applySubst s y
+  Unit        -> Unit
+  x :× y      -> applySubst s x :× applySubst s y
+  P x         -> P (applySubst s x)
+  TyCon f tys -> TyCon f (map (applySubst s) tys)
+  TyVar v     -> lookUp v s
+    where  lookUp :: String -> Constr -> Type
+           lookUp v  []                   = TyVar v
+           lookUp v1 ((TyVar v2, t) : s') = if   v2 == v1
+                                            then t
+                                            else lookUp v1 s'
 
 -- | Typed terms (where not every term has a type).
 data Typed = Typed { termOf :: Term, typeOf :: Maybe Type } deriving (Eq)

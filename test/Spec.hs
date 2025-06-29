@@ -7,13 +7,13 @@
 
 module Main where
 
+import Analysis.Adjectives.Adjectives
+import Analysis.Factivity.Factivity
 import Control.Monad.Writer
-import Lambda
-import Lambda
-import Grammar
-import Grammar.Lexica.SynSem.Adjectives
-import Grammar.Lexica.SynSem.Factivity
-import Target
+import Framework.Lambda
+import Framework.Lambda
+import Framework.Grammar
+import Framework.Target
 import Test.Hspec
 
 main :: IO ()

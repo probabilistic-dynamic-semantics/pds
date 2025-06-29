@@ -8,7 +8,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 
 {-|
-Module      : Grammar.CCG
+Module      : Framework.Grammar.CCG
 Description : CCG derivations.
 Copyright   : (c) Julian Grove and Aaron Steven White, 2025
 License     : MIT
@@ -18,7 +18,7 @@ CCG types are defined and used to type strings, analogously to the way λ-terms
 are typed.
 -}
 
-module Grammar.CCG where
+module Framework.Grammar.CCG where
 
 import           Data.Bifunctor
 import           Data.List
@@ -27,7 +27,7 @@ import           Control.Monad
 import           Control.Monad.State
 import qualified Data.Map            as Map
 import           Prelude             as Prel hiding (Word)
-import           Lambda                             (Typed)
+import           Framework.Lambda                   (Typed)
 
 --------------------------------------------------------------------------------
 -- * Expressions and grammatical categories
@@ -35,24 +35,23 @@ import           Lambda                             (Typed)
 type Word = String
 type Expr = [Word]
 
-data Cat = AP | Deg | NP | N | S | Qdeg
+data Cat = Base String
          | Cat :/: Cat
          | Cat :\: Cat
   deriving (Eq)
 
 instance Show Cat where
   show = \case
-    AP      -> "ap"
-    Deg     -> "deg"
-    NP      -> "np"
-    N       -> "n"
-    S       -> "s"
-    Qdeg    -> "qDeg"
+    Base a  -> a
     a :/: b -> "(" ++ show a ++ "/" ++ show b ++ ")"
     a :\: b -> "(" ++ show a ++ "\\" ++ show b ++ ")"
 
 infixl :/:
 infixl :\:
+
+(//), (\\) :: Cat -> Cat -> Cat
+a // b = a :/: b
+a \\ b = a :\: b
 
 type Lexicon m = Word -> [m]
 

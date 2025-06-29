@@ -2,7 +2,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 
 {-|
-Module      : Lambda.Delta
+Module      : Framework.Lambda.Delta
 Description : Delta rules.
 Copyright   : (c) Julian Grove and Aaron Steven White, 2025
 License     : MIT
@@ -12,12 +12,12 @@ Delta rules are defined. These encode algebraic laws relating λ-terms that
 feature constants.
 -}
 
-module Lambda.Delta where
+module Framework.Lambda.Delta where
 
 import Control.Applicative
 import Data.List
-import Lambda.Convenience
-import Lambda.Terms
+import Framework.Lambda.Convenience
+import Framework.Lambda.Terms
 
 --------------------------------------------------------------------------------
 -- * Delta rules

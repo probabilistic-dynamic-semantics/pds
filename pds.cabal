@@ -13,20 +13,20 @@ copyright:           2025
 build-type:          Simple
 
 library 
-  exposed-modules: Grammar
-                 , Grammar.CCG
-                 , Grammar.Lexica.SynSem
-                 , Grammar.Lexica.SynSem.Adjectives
-                 , Grammar.Lexica.SynSem.Convenience
-                 , Grammar.Lexica.SynSem.Factivity
-                 , Grammar.Parser
-                 , Lambda
-                 , Lambda.Convenience
-                 , Lambda.Delta
-                 , Lambda.Terms
-                 , Lambda.Types
-                 , Target
-                 , Target.Stan
+  exposed-modules: Analysis.Adjectives.Adjectives
+                 , Analysis.Factivity.Factivity
+                 , Framework.Grammar
+                 , Framework.Grammar.CCG
+                 , Framework.Grammar.Lexica.SynSem
+                 , Framework.Grammar.Lexica.SynSem.Convenience
+                 , Framework.Grammar.Parser
+                 , Framework.Lambda
+                 , Framework.Lambda.Convenience
+                 , Framework.Lambda.Delta
+                 , Framework.Lambda.Terms
+                 , Framework.Lambda.Types
+                 , Framework.Target
+                 , Framework.Target.Stan
   hs-source-dirs: src
   build-depends: base
                , containers

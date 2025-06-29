@@ -3,19 +3,19 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 
 {-|
-Module      : Grammar.Lexica.SynSem
+Module      : Analysis.Adjectives.Adjectives
 Description : Adjectives lexicon.
 Copyright   : (c) Julian Grove and Aaron Steven White, 2025
 License     : MIT
 Maintainer  : julian.grove@gmail.com
 -}
 
-module Grammar.Lexica.SynSem.Adjectives where
+module Analysis.Adjectives.Adjectives where
 
-import Grammar.CCG
-import Grammar.Lexica.SynSem
-import Grammar.Lexica.SynSem.Convenience as Convenience
-import Lambda
+import Framework.Grammar.CCG
+import Framework.Grammar.Lexica.SynSem
+import Framework.Grammar.Lexica.SynSem.Convenience as Convenience
+import Framework.Lambda
 
 --------------------------------------------------------------------------------
 -- * Lexica for adjectives
@@ -27,116 +27,124 @@ instance Interpretation Adjectives SynSem where
   lexica = [lex]
     where lex = \case
             "soccer player" -> [ SynSem {
-                                   syn = N,
+                                   syn = Base "n",
                                    sem = ty tau (purePP (lam x (lam i (sCon "soc_pla" @@ i @@ x))))
                                    } ]
             "linguist"      -> [ SynSem {
-                                   syn = N,
+                                   syn = Base "n",
                                    sem = ty tau (purePP (lam x (lam i (ling i @@ x))))
                                    } ]
             "philosopher"   -> [ SynSem {
-                                   syn = N,
+                                   syn = Base "n",
                                    sem = ty tau (purePP (lam x (lam i (phil i @@ x))))
                                    } ]
-            "tall"          -> [ SynSem {
-                                   syn = AP :\: Deg,
+            "full"          -> [ SynSem {
+                                   syn = Base "ap" \\ Base "deg",
                                    sem = ty tau (purePP (lam d (lam x (lam i (sCon "(≥)" @@ (sCon "height" @@ i @@ x) @@ d)))))
                                    }
                                , SynSem {
-                                   syn = AP,
+                                   syn = Base "ap",
+                                   sem = ty tau (lam s (purePP (lam x (lam i (sCon "(≥)" @@ (sCon "height" @@ i @@ x) @@ (sCon "d_tall" @@ s)))) @@ s))
+                                   } ]
+            "tall"          -> [ SynSem {
+                                   syn = Base "ap" \\ Base "deg",
+                                   sem = ty tau (purePP (lam d (lam x (lam i (sCon "(≥)" @@ (sCon "height" @@ i @@ x) @@ d)))))
+                                   }
+                               , SynSem {
+                                   syn = Base "ap",
                                    sem = ty tau (lam s (purePP (lam x (lam i (sCon "(≥)" @@ (sCon "height" @@ i @@ x) @@ (sCon "d_tall" @@ s)))) @@ s))
                                         } ]
             "jo"            -> [ SynSem {
-                                   syn = NP,
+                                   syn = Base "np",
                                    sem = ty tau (purePP (sCon "j"))
                                    }
                                , SynSem {
-                                   syn = S :/: (S :\: NP),
+                                   syn = Base "s" // (Base "s" \\ Base "np"),
                                    sem = ty tau (purePP (lam x (x @@ sCon "j")))
                                    } ]
             "bo"            -> [ SynSem {
-                                   syn = NP,
+                                   syn = Base "np",
                                    sem = ty tau (purePP (sCon "b"))
                                    }
                                , SynSem {
-                                   syn = S :/: (S :\: NP),
+                                   syn = Base "s" // (Base "s" \\ Base "np"),
                                    sem = ty tau (purePP (lam x (x @@ sCon "b")))
                                    } ]                  
             "every"         -> [ SynSem {
-                                   syn = (S :\: NP) :\: (S :\: NP :/: NP) :/: N,
+                                   syn = (Base "s" \\ Base "np") \\ (Base "s" \\ Base "np" // Base "np") // Base "n",
                                    sem = ty tau (purePP (lam c (lam k (lam y (lam i (sCon "∀" @@ (lam x (sCon "(⇒)" @@ (c @@ x @@ i) @@ (k @@ x @@ y @@ i)))))))))
                                    }
                                , SynSem {
-                                   syn = S :/: (S :\: NP) :/: N,
+                                   syn = Base "s" // (Base "s" \\ Base "np") // Base "n",
                                    sem = ty tau (purePP (lam c (lam k (lam i (sCon "∀" @@ (lam x (sCon "(⇒)" @@ (c @@ x @@ i) @@ (k @@ x @@ i))))))))
                                    }
                                , SynSem {
-                                   syn = S :\: (S :/: NP) :/: N,
+                                   syn = Base "s" \\ (Base "s" // Base "np") // Base "n",
                                    sem = ty tau (purePP (lam c (lam k (lam i (sCon "∀" @@ (lam x (sCon "(⇒)" @@ (c @@ x @@ i) @@ (k @@ x @@ i))))))))
                                    } ]
             "a"             -> [ SynSem {
-                                   syn = (S :\: NP) :\: (S :\: NP :/: NP) :/: N,
+                                   syn = (Base "s" \\ Base "np") \\ (Base "s" \\ Base "np" // Base "np") // Base "n",
                                    sem = ty tau (purePP (lam c (lam k (lam y (lam i (sCon "∃" @@ (lam x (sCon "(∧)" @@ (c @@ x @@ i) @@ (k @@ x @@ y @@ i)))))))))
                                    }
                                , SynSem {
-                                   syn = S :/: (S :\: NP) :/: N,
+                                   syn = Base "s" // (Base "s" \\ Base "np") // Base "n",
                                    sem = ty tau (purePP (lam c (lam k (lam i (sCon "∃" @@ (lam x (sCon "(∧)" @@ (c @@ x @@ i) @@ (k @@ x @@ i))))))))
                                    }
                                , SynSem {
-                                   syn = S :\: (S :/: NP) :/: N,
+                                   syn = Base "s" \\ (Base "s" // Base "np") // Base "n",
                                    sem = ty tau (purePP (lam c (lam k (lam i (sCon "∃" @@ (lam x (sCon "(∧)" @@ (c @@ x @@ i) @@ (k @@ x @@ i))))))))
                                    }
                                , SynSem {
-                                   syn = NP :/: N,
+                                   syn = Base "np" // Base "n",
                                    sem = ty tau (purePP (lam x x))
                                    } ]
             "likely"      -> [ SynSem {
-                                 syn = S :\: Deg :/: S,
+                                 syn = Base "s" \\ Base "deg" // Base "s",
                                  sem = ty tau (lam s (purePP (lam p (lam d (lam _' (sCon "(≥)" @@ (Pr (let' i (CG s) (Return (p @@ i)))) @@ d)))) @@ s))
                                  } ]
             "how"         -> [ SynSem {
-                                 syn =  Qdeg :/: (S :/: AP) :/: (AP :\: Deg),
+                                 syn =  Base "qDeg" // (Base "s" // Base "ap") // (Base "ap" \\ Base "deg"),
                                  sem = ty tau (purePP (lam x (lam y (lam z (y @@ (x @@ z))))))
                                  }
                              , SynSem {
-                                 syn = Qdeg :/: (S :\: Deg),
+                                 syn = Base "qDeg" // (Base "s" \\ Base "deg"),
                                  sem = ty tau (purePP (lam x x))
                                  } ]
 
             "is"            -> [ SynSem {
-                                   syn = S :\: NP :/: AP,
+                                   syn = Base "s" \\ Base "np" // Base "ap",
                                    sem = ty tau (purePP (lam x x))
                                    }
                                , SynSem {
-                                   syn = S :\: NP :/: NP,
+                                   syn = Base "s" \\ Base "np" // Base "np",
                                    sem = ty tau (purePP (lam x x))
                                    } ]
             "and"           -> [ SynSem {
-                                   syn = S :/: (S :\: NP) :\: (S :/: (S :\: NP)) :/: (S :/: (S :\: NP)),
+                                   syn = Base "s" // (Base "s" \\ Base "np") \\ (Base "s" // (Base "s" \\ Base "np")) // (Base "s" // (Base "s" \\ Base "np")),
                                    sem = ty tau (purePP (lam m (lam n (lam k (lam i (sCon "(∧)" @@ (n @@ k @@ i) @@ (m @@ k @@ i)))))))
                                    }
                                , SynSem {
-                                   syn = S :\: (S :/: NP) :\: (S :\: (S :/: NP)) :/: (S :\: (S :/: NP)),
+                                   syn = Base "s" \\ (Base "s" // Base "np") \\ (Base "s" \\ (Base "s" // Base "np")) // (Base "s" \\ (Base "s" // Base "np")),
                                    sem = ty tau (purePP (lam m (lam n (lam k (lam i (sCon "(∧)" @@ (n @@ k @@ i) @@ (m @@ k @@ i)))))))
                                    }
                                , SynSem {
-                                   syn = (S :\: NP) :\: (S :\: NP :/: NP) :\: ((S :\: NP) :\: (S :\: NP :/: NP)) :/: ((S :\: NP) :\: (S :\: NP :/: NP)),
+                                   syn = (Base "s" \\ Base "np") \\ (Base "s" \\ Base "np" // Base "np") \\ ((Base "s" \\ Base "np") \\ (Base "s" \\ Base "np" // Base "np")) // ((Base "s" \\ Base "np") \\ (Base "s" \\ Base "np" // Base "np")),
                                    sem = ty tau (purePP (lam m (lam n (lam k (lam x (lam i (sCon "(∧)" @@ (n @@ k @@ x @@ i) @@ (m @@ k @@ x @@ i))))))))
                                    }
                                , SynSem {
-                                   syn = S :\: S :/: S,
+                                   syn = Base "s" \\ Base "s" // Base "s",
                                    sem = ty tau (purePP (lam m (lam n (lam i (sCon "(∧)" @@ (n @@ i) @@ (m @@ i))))))
                                    }
                                , SynSem {
-                                   syn = S :\: NP :\: (S :\: NP) :/: (S :\: NP),
+                                   syn = Base "s" \\ Base "np" \\ (Base "s" \\ Base "np") // (Base "s" \\ Base "np"),
                                    sem = ty tau (purePP (lam m (lam n (lam x (lam i (sCon "(∧)" @@ (n @@ x @@ i) @@ (m @@ x @@ i)))))))
                                    }
                                , SynSem {
-                                   syn = S :\: NP :/: NP :\: (S :\: NP :/: NP) :/: (S :\: NP :/: NP),
+                                   syn = Base "s" \\ Base "np" // Base "np" \\ (Base "s" \\ Base "np" // Base "np") // (Base "s" \\ Base "np" // Base "np"),
                                    sem = ty tau (purePP (lam m (lam n (lam x (lam y (lam i (sCon "(∧)" @@ (n @@ x @@ y @@ i) @@ (m @@ x @@ y @@ i))))))))
                                    } ]
             "that"        -> [ SynSem {
-                                 syn = S :/: S,
+                                 syn = Base "s" // Base "s",
                                  sem = ty tau (purePP (lam x x))
                                  } ]
 
@@ -154,6 +162,11 @@ scaleNormingPrior = Return (upd_CG cg' ϵ)
 -- | Prior to be used for the likelihood example.
 likelihoodPrior :: Term
 likelihoodPrior = let' x (normal 0 1) (Return (UpdDTall x (upd_CG cg' ϵ)))
+  where cg' = let' y (normal 0 1) (let' w (LogitNormal 0 1) (let' b (Bern w) (Return (UpdHeight (lam z y) (UpdSocPla (lam z b) _0)))))
+
+-- | Prior to be used for the likelihood example for relative adjectives (/tall/).
+likelihoodPriorRelative :: Term
+likelihoodPriorRelative = let' x (normal 0 1) (let' y (normal 0 1) (Return (UpdDTall x (upd_CG cg' ϵ))))
   where cg' = let' y (normal 0 1) (let' w (LogitNormal 0 1) (let' b (Bern w) (Return (UpdHeight (lam z y) (UpdSocPla (lam z b) _0)))))
 
 -- | Respones function to be used for adjective examples.

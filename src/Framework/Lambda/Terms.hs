@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 
 {-|
-Module      : Lambda.Terms
+Module      : Framework.Lambda.Terms
 Description : λ-calculus (with probabilistic programs).
 Copyright   : (c) Julian Grove and Aaron Steven White, 2025
 License     : MIT
@@ -11,21 +11,21 @@ We encode (untyped) λ-calculus, with constants, and including a definition of
 probabilistic programs.
 -}
 
-module Lambda.Terms ( betaDeltaNormal
-                    , betaEtaNormal
-                    , betaNormal
-                    , Constant
-                    , dCon
-                    , DeltaRule
-                    , etaNormal
-                    , freeVars
-                    , fresh
-                    , sCon
-                    , subst
-                    , Term(..)
-                    , (@@)
-                    , (&)
-                    ) where
+module Framework.Lambda.Terms ( betaDeltaNormal
+                              , betaEtaNormal
+                              , betaNormal
+                              , Constant
+                              , dCon
+                              , DeltaRule
+                              , etaNormal
+                              , freeVars
+                              , fresh
+                              , sCon
+                              , subst
+                              , Term(..)
+                              , (@@)
+                              , (&)
+                              ) where
 
 import Control.Monad.State (evalStateT, get, lift, put, StateT)
 import Data.Char           (toLower)

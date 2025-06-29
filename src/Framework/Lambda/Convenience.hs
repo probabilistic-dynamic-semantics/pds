@@ -32,6 +32,9 @@ e = Atom "e"
 t = Atom "t"
 r = Atom "r"
 
+q :: Type -> Type -> Type -> Type
+q i q a = TyCon "Q" [i, q, a]
+
 -- ** Signatures
 
 -- | An example signature.
@@ -84,8 +87,8 @@ tau = \case
   Left  "tau_know"     -> Just (σ :→ t)
   Left  "upd_CG"       -> Just (P ι :→ σ :→ σ)
   Left  "CG"           -> Just (σ :→ P ι)
-  Left  "upd_QUD"      -> Just ((κ :→ ι :→ t) :→ σ :→ Q ι κ σ)
-  Left  "QUD"          -> Just (Q ι κ σ :→ κ :→ ι :→ t)
+  Left  "upd_QUD"      -> Just ((κ :→ ι :→ t) :→ σ :→ q ι κ σ)
+  Left  "QUD"          -> Just (q ι κ σ :→ κ :→ ι :→ t)
   Left  "upd_epi"      -> Just ((e :→ (ω :→ t) :→ t) :→ ι :→ ι)
   Left  "epi"          -> Just (ι :→ e :→ (ω :→ t) :→ t)
   Left  "max"          -> Just ((r :→ t) :→ r)

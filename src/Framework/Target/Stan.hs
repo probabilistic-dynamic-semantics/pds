@@ -16,7 +16,7 @@ import Analysis.Adjectives.Adjectives
 import Analysis.Factivity.Factivity
 import Control.Monad.Writer
 import Control.Monad.State
-import Data.Char                        (toLower)
+import Data.Char                      (toLower)
 import Framework.Lambda
 import Framework.Grammar
 
@@ -38,8 +38,8 @@ instance Show Error where
   show TypeError = "Error: Term does not have type P r!"
 
 stanShow :: Term -> String
-stanShow v@(Var _) = show v
-stanShow x@(DCon _) = show x
+stanShow v@(Var _)         = show v
+stanShow x@(DCon _)        = show x
 stanShow (NormalCDF x y z) = "normal_cdf(" ++ stanShow z ++ ", " ++ stanShow x ++ ", " ++ stanShow y ++ ")"
 
 lRender :: VarName -> Term -> String

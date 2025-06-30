@@ -13,6 +13,7 @@ module Framework.Grammar.Lexica.SynSem.Convenience where
 import Framework.Grammar.CCG
 import Framework.Grammar.Lexica.SynSem
 import Framework.Lambda
+import Theory.Signature
 
 --------------------------------------------------------------------------------
 -- * Some convenience functions

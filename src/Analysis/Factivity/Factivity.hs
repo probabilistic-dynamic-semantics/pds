@@ -16,6 +16,7 @@ import Framework.Grammar.CCG
 import Framework.Grammar.Lexica.SynSem
 import Framework.Grammar.Lexica.SynSem.Convenience as Convenience
 import Framework.Lambda
+import Theory.Signature
 
 --------------------------------------------------------------------------------
 -- * Lexica for factivity

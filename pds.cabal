@@ -22,11 +22,12 @@ library
                  , Framework.Grammar.Parser
                  , Framework.Lambda
                  , Framework.Lambda.Convenience
-                 , Framework.Lambda.Delta
                  , Framework.Lambda.Terms
                  , Framework.Lambda.Types
                  , Framework.Target
                  , Framework.Target.Stan
+                 , Theory.Delta
+                 , Theory.Signature
   hs-source-dirs: src
   build-depends: base
                , containers

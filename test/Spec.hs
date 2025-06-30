@@ -15,6 +15,8 @@ import Framework.Lambda
 import Framework.Grammar
 import Framework.Target
 import Test.Hspec
+import Theory.Delta
+import Theory.Signature
 
 main :: IO ()
 main = hspec $ do

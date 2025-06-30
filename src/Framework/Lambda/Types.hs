@@ -16,6 +16,7 @@ module Framework.Lambda.Types ( arity
                               , order
                               , Sig
                               , ty
+                              , tyEq
                               , Type(..)
                               , Typed(..)
                               , unify

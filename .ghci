@@ -1,18 +1,20 @@
 :set -isrc -XDataKinds -XTypeApplications
-:load Analysis.Adjectives.Adjectives Analysis.Factivity.Factivity Framework.Grammar Framework.Grammar.CCG Framework.Grammar.Lexica.SynSem Framework.Grammar.Parser Framework.Lambda Framework.Lambda.Convenience Framework.Lambda.Terms Framework.Lambda.Types Framework.Target Framework.Target.Stan Theory.Delta Theory.Signature
+:load Analysis.Adjectives.Adjectives Analysis.Adjectives.Signature Analysis.Factivity.Factivity Analysis.Factivity.Signature Framework.Grammar Framework.Grammar.CCG Framework.Grammar.Lexica.SynSem Framework.Grammar.Parser Framework.Lambda Framework.Lambda.Convenience Framework.Lambda.Delta Framework.Lambda.Terms Framework.Lambda.Types Framework.Target Framework.Target.Stan Theory.Signature
 
 
 import Analysis.Adjectives.Adjectives
+import Analysis.Adjectives.Signature
 import Analysis.Factivity.Factivity
+import Analysis.Factivity.Signature
 import Framework.Grammar
 import Framework.Grammar.CCG
 import Framework.Grammar.Lexica.SynSem
 import Framework.Grammar.Parser
 import Framework.Lambda
 import Framework.Lambda.Convenience
+import Framework.Lambda.Delta
 import Framework.Lambda.Terms
 import Framework.Lambda.Types
 import Framework.Target
 import Framework.Target.Stan
-import Theory.Delta
 import Theory.Signature

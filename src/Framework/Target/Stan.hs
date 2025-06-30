@@ -58,7 +58,7 @@ pRender (Truncate m x y) = pRender m ++ " T[" ++ stanShow x ++ ", " ++ stanShow 
 
 toStan :: Term -> Writer [Error] Model
 toStan = \case
-  t         | typeOf (ty tau t) /= Just (P (Atom "r")) -> do
+  t         | typeOf (ty tau0 t) /= Just (P (Atom "r")) -> do
       tell [TypeError]
       pure (Model [])
   t@(Let x y z) -> toStan' t

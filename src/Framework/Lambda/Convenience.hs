@@ -13,6 +13,7 @@ Convenience functions, smart constructors, etc.
 
 module Framework.Lambda.Convenience where
 
+import Control.Applicative
 import Framework.Lambda.Terms
 import Framework.Lambda.Types
 
@@ -79,7 +80,7 @@ pattern GE a b          = SCon "(≥)" `App` a `App` b
 pattern Mult x y        = SCon "mult" `App` (Pair x y)
 pattern Beta x y        = SCon "Beta" `App` (Pair x y)
 pattern Normal x y      = SCon "Normal" `App` (Pair x y)
-pattern LogitNormal x y = SCon "LogitNormal" `App` (Pair x y)
+pattern LogitNormal x y = SCon "Logit_normal" `App` (Pair x y)
 pattern UpdEpi acc i    = SCon "upd_epi" `App` acc `App` i
 pattern UpdCG cg s      = SCon "upd_CG" `App` cg `App` s
 pattern UpdLing p i     = SCon "upd_ling" `App` p `App` i
@@ -91,12 +92,18 @@ pattern UpdProp1 b i    = SCon "upd_prop1" `App` b `App` i
 pattern UpdQUD q s      = SCon "upd_QUD" `App` q ` App` s
 
 pattern Disj, ITE, Truncate :: Term -> Term -> Term -> Term
-pattern Disj x m n      = SCon "disj" `App` x `App` (Pair m n)
-pattern ITE p x y       = SCon "if_then_else" `App` p `App` (Pair x y)
+pattern Disj x m n      = SCon "disj" `App` (Pair (Pair x m) n)
+pattern ITE p x y       = SCon "if_then_else" `App` (Pair (Pair p x) y)
 pattern Truncate m x y  = SCon "Truncate" `App` (Pair x y) `App` m
 pattern NormalCDF x y z = SCon "Normal_cdf" `App` (Pair x y) `App` z
 
 pattern NormalCDF' v v' x y t = Pr (Let v (Normal x y) (Return (GE t (Var v'))))
+
+pattern LkUp :: String -> Term -> Term
+pattern LkUp c s = SCon c `App` s
+
+pattern Upd :: String -> Term -> Term -> Term
+pattern Upd c v s = SCon ('u' : 'p' : 'd' : '_' : c) `App` v `App` s
 
 -- *** Convenience and smart constructors
 
@@ -153,7 +160,7 @@ t >>>= u    = lam fr (let' e (t @@ fr) (u @@ Pi1 e @@ Pi2 e))
 m >>> n     = m >>>= (lam _' n)
 t <**> u    = t >>>= (lam fr (u >>>= (lam e (purePP (fr @@ e)))))
   where fr:e:sh = map Var $ fresh [t, u]
-t <$$> u    = purePP t <**> u
+t <$$> u    = purePP t Framework.Lambda.Convenience.<**> u
 lam (Var v) = Lam v
 normal x y  = sCon "Normal" @@ (x & y)
 
@@ -210,3 +217,9 @@ sampleOnly = \case
   LogitNormal _ _ -> True
   Truncate _ _ _  -> True
   _               -> False
+
+
+-- ** Combining signatures and rules
+
+(<||>) :: Alternative m => (a -> m b) -> (a -> m b) -> a -> m b
+f <||> g = \x -> f x <|> g x

@@ -19,6 +19,7 @@ import Control.Monad.State
 import Data.Char                      (toLower)
 import Framework.Lambda
 import Framework.Grammar
+import Theory.Signature
 
 type Distr   = String
 type VarName = String

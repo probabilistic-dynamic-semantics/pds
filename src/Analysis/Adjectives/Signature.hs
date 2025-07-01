@@ -21,14 +21,14 @@ import Framework.Lambda.Types
 import Theory.Signature
 
 tauAdj :: Sig
-tauAdj = tau0      <||>
-         tauNames  <||>
-         tauStates <||>
+tauAdj = tau0                                <||>
+         tauNames                            <||>
+         tauStates                           <||>
          mkStateSig ι [ ("soc_pla", e :→ t)
                       , ("ling", e :→ t)
                       , ("phil", e :→ t)
-                      , ("height", e :→ r)
-                      , ("d_tall", r) ]
+                      , ("height", e :→ r) ] <||>
+         mkStateSig σ [ ("d_tall", r) ]
 
 tauNames :: Sig
 tauNames = \case

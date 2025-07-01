@@ -17,7 +17,6 @@ module Framework.Lambda.Delta where
 import Data.List
 import Framework.Lambda.Convenience
 import Framework.Lambda.Terms
-import Theory.Signature
 
 --------------------------------------------------------------------------------
 -- * Delta rules
@@ -130,6 +129,7 @@ probabilities = \case
 -- | Computes functions on indices and states.
 states :: DeltaRule
 states = \case
-  LkUp c (Upd c' v _) | c' == c -> Just v
-  LkUp c (Upd c' _ s) | c' /= c -> Just (LkUp c s)
-  _                             -> Nothing
+  LkUp c   (Upd c' v _) | c' == c -> Just v
+  LkUp c   (Upd c' _ s) | c' /= c -> Just (LkUp c s)
+  Upd  c v (Upd c' _ s) | c' == c -> Just (Upd c v s)
+  _                               -> Nothing

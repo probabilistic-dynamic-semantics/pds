@@ -25,6 +25,7 @@ library
                  , Framework.Lambda
                  , Framework.Lambda.Convenience
                  , Framework.Lambda.Delta
+                 , Framework.Lambda.Signature
                  , Framework.Lambda.Terms
                  , Framework.Lambda.Types
                  , Framework.Target

@@ -13,7 +13,6 @@ module Framework.Grammar.Lexica.SynSem.Convenience where
 import Framework.Grammar.CCG
 import Framework.Grammar.Lexica.SynSem
 import Framework.Lambda
-import Theory.Signature
 
 --------------------------------------------------------------------------------
 -- * Some convenience functions
@@ -95,21 +94,21 @@ flipp t = Lam fr (Lam e (t @@ Var e @@ Var fr))
 combineR (SynSem b x) (SynSem a y)
   = case compDepthEnglish "r" b a of
       PairFun (Just (dComp, cComp)) (Just (dSub, cSub))
-        -> [ SynSem cComp (ty tau (betaEtaNormal $ genComp !! dComp <$$> termOf x <**> termOf y))
-           , SynSem cSub (ty tau (betaEtaNormal $ genSub !! dSub <$$> termOf x <**> termOf y)) ]
+        -> [ SynSem cComp (ty tau0 (betaEtaNormal $ genComp !! dComp <$$> termOf x <**> termOf y))
+           , SynSem cSub (ty tau0 (betaEtaNormal $ genSub !! dSub <$$> termOf x <**> termOf y)) ]
       PairFun (Just (dComp, cComp)) Nothing
-        -> [SynSem cComp (ty tau (betaEtaNormal $ genComp !! dComp <$$> termOf x <**> termOf y))]
+        -> [SynSem cComp (ty tau0 (betaEtaNormal $ genComp !! dComp <$$> termOf x <**> termOf y))]
       PairFun Nothing (Just (dSub, cSub))
-        -> [SynSem cSub (ty tau (betaEtaNormal $ genSub !! dSub <$$> termOf x <**> termOf y))]
+        -> [SynSem cSub (ty tau0 (betaEtaNormal $ genSub !! dSub <$$> termOf x <**> termOf y))]
       _ -> []
 
 combineL (SynSem a x) (SynSem b y)
   = case compDepthEnglish "l" a b of
       PairFun (Just (dComp, cComp)) (Just (dSub, cSub))
-        -> [ SynSem cComp (ty tau (betaEtaNormal $ flipp (genComp !! dComp) <$$> termOf x <**> termOf y))
-           , SynSem cSub (ty tau (betaEtaNormal $ flipp (genSub !! dSub) <$$> termOf x <**> termOf y)) ]
+        -> [ SynSem cComp (ty tau0 (betaEtaNormal $ flipp (genComp !! dComp) <$$> termOf x <**> termOf y))
+           , SynSem cSub (ty tau0 (betaEtaNormal $ flipp (genSub !! dSub) <$$> termOf x <**> termOf y)) ]
       PairFun (Just (dComp, cComp)) Nothing
-        -> [SynSem cComp (ty tau (betaEtaNormal $ flipp (genComp !! dComp) <$$> termOf x <**> termOf y))]
+        -> [SynSem cComp (ty tau0 (betaEtaNormal $ flipp (genComp !! dComp) <$$> termOf x <**> termOf y))]
       PairFun Nothing (Just (dSub, cSub))
-        -> [SynSem cSub (ty tau (betaEtaNormal $ flipp (genSub !! dSub) <$$> termOf x <**> termOf y))]
+        -> [SynSem cSub (ty tau0 (betaEtaNormal $ flipp (genSub !! dSub) <$$> termOf x <**> termOf y))]
       _ -> []

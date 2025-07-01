@@ -8,15 +8,14 @@
 module Main where
 
 import Analysis.Adjectives.Adjectives
+import Analysis.Adjectives.Signature
 import Analysis.Factivity.Factivity
+import Analysis.Factivity.Signature
 import Control.Monad.Writer
-import Framework.Lambda
 import Framework.Lambda
 import Framework.Grammar
 import Framework.Target
 import Test.Hspec
-import Theory.Delta
-import Theory.Signature
 
 main :: IO ()
 main = hspec $ do
@@ -37,13 +36,13 @@ getSemantics n = sem . (indices !! n) . getList . flip (interpretations @p) 0
   where indices = head : map (\f -> f . tail) indices
 stanOutput     = fst . runWriter . toStan . termOf
 
-deltaRules = arithmetic <||> indices <||> states <||> disjunctions <||> cleanUp <||> maxes <||> probabilities <||> logical <||> ite <||> observations
+deltaRules = arithmetic <||> states <||> disjunctions <||> cleanUp <||> maxes <||> probabilities <||> logical <||> ite <||> observations
   
 s1         = termOf $ getSemantics @Factivity 1 ["jo", "knows", "that", "bo", "is", "a", "linguist"] 
 q1         = termOf $ getSemantics @Factivity 1 ["how", "likely", "that", "bo", "is", "a", "linguist"]
-discourse  = ty tau $ assert s1 >>> ask q1
+discourse  = ty tauFact $ assert s1 >>> ask q1
 
-factivityExample = asTyped tau (betaDeltaNormal deltaRules . factivityRespond factivityPrior) discourse
+factivityExample = asTyped tauFact (betaDeltaNormal deltaRules . factivityRespond factivityPrior) discourse
 
 factivityResult :: Model
 factivityResult = Model [ ("v", "logit_normal(0.0, 1.0)")
@@ -52,18 +51,18 @@ factivityResult = Model [ ("v", "logit_normal(0.0, 1.0)")
 
 s1'        = termOf $ getSemantics @Adjectives 1 ["jo", "is", "a", "soccer player"] 
 q1'        = termOf $ getSemantics @Adjectives 0 ["how", "tall", "jo", "is"]
-discourse' = ty tau $ assert s1' >>> ask q1'
+discourse' = ty tauFact $ assert s1' >>> ask q1'
 
-scaleNormingExample = asTyped tau (betaDeltaNormal deltaRules . adjectivesRespond scaleNormingPrior) discourse'
+scaleNormingExample = asTyped tauAdj (betaDeltaNormal deltaRules . adjectivesRespond scaleNormingPrior) discourse'
 
 scaleNormingResult :: Model
 scaleNormingResult = Model [ ("w", "normal(0.0, 1.0)")
                            , ("y", "normal_lpdf(y | w, sigma)") ]
 
 q1''        = termOf $ getSemantics @Adjectives 0 ["how", "likely", "that", "jo", "is", "tall"]
-discourse'' = ty tau $ assert s1' >>> ask q1''
+discourse'' = ty tauAdj $ assert s1' >>> ask q1''
 
-likelihoodExample = asTyped tau (betaDeltaNormal deltaRules . adjectivesRespond likelihoodPrior) discourse''
+likelihoodExample = asTyped tauAdj (betaDeltaNormal deltaRules . adjectivesRespond likelihoodPrior) discourse''
 
 likelihoodResult :: Model
 likelihoodResult = Model [ ("v", "normal(0.0, 1.0)")

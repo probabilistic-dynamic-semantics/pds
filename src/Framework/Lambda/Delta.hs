@@ -12,9 +12,8 @@ Delta rules are defined. These encode algebraic laws relating λ-terms that
 feature constants.
 -}
 
-module Theory.Delta where
+module Framework.Lambda.Delta where
 
-import Control.Applicative
 import Data.List
 import Framework.Lambda.Convenience
 import Framework.Lambda.Terms
@@ -22,11 +21,6 @@ import Theory.Signature
 
 --------------------------------------------------------------------------------
 -- * Delta rules
-
--- ** Combining rules
-
-(<||>) :: Alternative m => (a -> m b) -> (a -> m b) -> a -> m b
-f <||> g = \x -> f x <|> g x
 
 -- ** Example rules
 
@@ -89,23 +83,6 @@ indicator = \case
   Indi Fa -> Just 0
   _       -> Nothing
 
--- | Computes functions on indices.
-indices :: DeltaRule
-indices = \case
-  Epi    (UpdEpi p _)    -> Just p
-  Epi    (UpdLing _ i)   -> Just (Epi i)
-  Epi    (UpdSocPla _ i) -> Just (Epi i)
-  Ling   (UpdLing p _)   -> Just p
-  Ling   (UpdEpi _ i)    -> Just (Ling i)
-  Ling   (UpdSocPla _ i) -> Just (Ling i)
-  Height (UpdHeight p _) -> Just p
-  Height (UpdSocPla _ i) -> Just (Height i)
-  SocPla (UpdSocPla p _) -> Just p
-  SocPla (UpdHeight _ i) -> Just (SocPla i)
-  SocPla (UpdLing _ i)   -> Just (SocPla i)
-  SocPla (UpdEpi _  i)   -> Just (SocPla i)
-  _                      -> Nothing
-
 -- | Computes /if then else/.
 ite :: DeltaRule
 ite = \case
@@ -150,21 +127,9 @@ probabilities = \case
   Pr (Let v (Normal x y) (Return (GE (Var v') t))) | v' == v -> Just (NormalCDF (- x) y t)
   _                                                          -> Nothing
 
--- | Computes functions on states.
+-- | Computes functions on indices and states.
 states :: DeltaRule
 states = \case
-  CG      (UpdCG cg _)     -> Just cg
-  CG      (UpdDTall _ s)   -> Just (CG s)
-  CG      (UpdQUD _ s)     -> Just (CG s)
-  CG      (UpdTauKnow _ s) -> Just (CG s)
-  DTall   (UpdDTall d _)   -> Just d
-  DTall   (UpdCG _ s)      -> Just (DTall s)
-  DTall   (UpdQUD _ s)     -> Just (DTall s)
-  QUD     (UpdQUD q _)     -> Just q
-  QUD     (UpdCG _ s)      -> Just (QUD s)
-  QUD     (UpdDTall _ s)   -> Just (QUD s)
-  QUD     (UpdTauKnow _ s) -> Just (QUD s)
-  TauKnow (UpdTauKnow b _) -> Just b
-  TauKnow (UpdCG _ s)      -> Just (TauKnow s)
-  TauKnow (UpdQUD _ s)     -> Just (TauKnow s)
-  _                        -> Nothing
+  LkUp c (Upd c' v _) | c' == c -> Just v
+  LkUp c (Upd c' _ s) | c' /= c -> Just (LkUp c s)
+  _                             -> Nothing

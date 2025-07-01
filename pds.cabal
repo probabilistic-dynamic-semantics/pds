@@ -14,7 +14,9 @@ build-type:          Simple
 
 library 
   exposed-modules: Analysis.Adjectives.Adjectives
+                 , Analysis.Adjectives.Signature
                  , Analysis.Factivity.Factivity
+                 , Analysis.Factivity.Signature
                  , Framework.Grammar
                  , Framework.Grammar.CCG
                  , Framework.Grammar.Lexica.SynSem
@@ -22,11 +24,12 @@ library
                  , Framework.Grammar.Parser
                  , Framework.Lambda
                  , Framework.Lambda.Convenience
+                 , Framework.Lambda.Delta
+                 , Framework.Lambda.Signature
                  , Framework.Lambda.Terms
                  , Framework.Lambda.Types
                  , Framework.Target
                  , Framework.Target.Stan
-                 , Theory.Delta
                  , Theory.Signature
   hs-source-dirs: src
   build-depends: base

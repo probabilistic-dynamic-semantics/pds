@@ -11,7 +11,8 @@ Maintainer  : julian.grove@gmail.com
 Signatures for constants used across the framework.
 -}
 
-module Framework.Lambda.Signature ( mkStateSig
+module Framework.Lambda.Signature ( mkStackSig
+                                  , mkStateSig
                                   , tau0
                                   , tauArithmetic
                                   , tauIndicesInit
@@ -100,6 +101,7 @@ tauStatesInit = \case
 
 -- * Functions for generating signatures
 
+-- | Make signatures for updating and accessing states.
 mkStateSig :: Type -> [(String, Type)] -> Sig
 mkStateSig _   []               = const Nothing
 mkStateSig sTy ((c, ty) : ctys) = ctySig <||> mkStateSig sTy ctys
@@ -108,3 +110,13 @@ mkStateSig sTy ((c, ty) : ctys) = ctySig <||> mkStateSig sTy ctys
           Left c' | c' == c           -> Just (sTy :→ ty)
           Left c' | c' == "upd_" ++ c -> Just (ty :→ sTy :→ sTy)
           _                           -> Nothing
+
+-- | Make signatures for pushing to and popping from stacks.
+mkStackSig :: Type -> (Type -> Type) -> (Type -> Type) -> [(String, Type)] -> Sig
+mkStackSig _   _ _ []               = const Nothing
+mkStackSig sTy f g ((c, ty) : ctys) = ctySig <||> mkStackSig sTy f g ctys
+  where ctySig :: Sig
+        ctySig = \case
+          Left c' | c' == "push_" ++ c -> Just (ty :→ sTy :→ f sTy)
+          Left c' | c' == "pop_"  ++ c -> Just (sTy :→ ty :× g sTy)
+          _                            -> Nothing

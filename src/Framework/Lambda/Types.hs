@@ -17,6 +17,7 @@ module Framework.Lambda.Types ( arity
                               , Sig
                               , ty
                               , tyEq
+                              , tyEq'
                               , Type(..)
                               , Typed(..)
                               , unify
@@ -45,10 +46,19 @@ data Type = Atom String
           | TyVar String
   deriving (Eq)
 
+-- | Relations on types.
+type TypeRel = Type -> Type -> Bool
+
 -- | Determine if two types are semantically equivalent.
-tyEq :: Type -> Type -> Bool
-tyEq α β = applySubst substα α == applySubst substβ β
-  where substα, substβ :: Constr
+tyEq :: (TypeRel -> TypeRel) -> TypeRel
+tyEq cmpr α β = tyEq0 cmpr (applySubst substα α) (applySubst substβ β)
+  where tyEq0 :: (TypeRel -> TypeRel) -> TypeRel
+        tyEq0 cmpr α β = α == β || α `cmprTyEq0` β
+
+        cmprTyEq0 :: TypeRel
+        cmprTyEq0 = cmpr (tyEq0 cmpr)
+
+        substα, substβ :: Constr
         substα = zip (TyVar <$> αVars) (TyVar <$> newVars)
         substβ = zip (TyVar <$> βVars) (TyVar <$> newVars)
   
@@ -56,6 +66,25 @@ tyEq α β = applySubst substα α == applySubst substβ β
         αVars = getVars α
         βVars = getVars β
         newVars = filter (flip notElem $ αVars ++ βVars) tyVars
+
+popTy :: TypeRel -> TypeRel
+popTy cmpr (TyCon ('p' : 'o' : 'p' : f) tys) β =
+  case last tys of
+    TyCon g tys' | f == g && length (init tys) == length (init tys') ->
+                     and (zipWith cmpr (init tys) (init tys')) &&
+                     last tys' `cmpr` β
+    TyCon g tys' | otherwise                                         ->
+                     case β of
+                       TyCon h tys'' | g == h && length (init tys') == length (init tys'') ->
+                                         and (zipWith cmpr (init tys') (init tys'')) &&
+                                         TyCon ("pop" ++ f) (init tys ++ [last tys']) `cmpr` last tys''
+    _                                                                 -> False
+popTy cmpr α β@(TyCon ('p' : 'o' : 'p' : f) tys) = popTy cmpr β α
+popTy _    _ _                                   = False
+
+tyEq' :: TypeRel
+-- tyEq' = tyEq popTy
+tyEq' = tyEq id
 
 instance Show Type where
   show = \case

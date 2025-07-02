@@ -52,7 +52,7 @@ factivityResult = Model [ ("v", "logit_normal(0.0, 1.0)")
 
 s1'        = termOf $ getSemantics @Adjectives 1 ["jo", "is", "a", "soccer player"] 
 q1'        = termOf $ getSemantics @Adjectives 0 ["how", "tall", "jo", "is"]
-discourse' = ty tauFact $ assert s1' >>> ask q1'
+discourse' = ty tauAdj $ assert s1' >>> ask q1'
 
 scaleNormingExample = asTyped tauAdj (betaDeltaNormal deltaRules . adjectivesRespond scaleNormingPrior) discourse'
 

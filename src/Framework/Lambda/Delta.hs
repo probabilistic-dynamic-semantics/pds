@@ -129,7 +129,14 @@ probabilities = \case
 -- | Computes functions on indices and states.
 states :: DeltaRule
 states = \case
-  LkUp c   (Upd c' v _) | c' == c -> Just v
-  LkUp c   (Upd c' _ s) | c' /= c -> Just (LkUp c s)
-  Upd  c v (Upd c' _ s) | c' == c -> Just (Upd c v s)
-  _                               -> Nothing
+  LkUp c   (Upd  c' v _) | c' == c -> Just v
+  LkUp c   (Upd  c' _ s) | c' /= c -> Just (LkUp c s)
+  Upd  c v (Upd  c' _ s) | c' == c -> Just (Upd c v s)
+  Pop  c   (Push c' v s) | c' == c -> Just (v & s)
+  Pop  c   (Push c' _ s) | c' /= c -> Just (Pop c s)
+  LkUp c   (Push _  _ s)           -> Just (LkUp c s)
+  Pop  c   (Upd  c' v s)           -> Just (v' & s')
+    where v', s' :: Term
+          v' = Pi1 (Pop c s)
+          s' = Upd c' v (Pi1 (Pop c s))
+  _                                -> Nothing

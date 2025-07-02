@@ -33,8 +33,9 @@ e = Atom "e"
 t = Atom "t"
 r = Atom "r"
 
-q :: Type -> Type -> Type -> Type
+q, popQ :: Type -> Type -> Type -> Type
 q i q a = TyCon "Q" [i, q, a]
+popQ i q a = TyCon "popQ" [i, q, a]
 
 -- ** Pattern synonyms and term abbreviations
 
@@ -69,9 +70,9 @@ pattern SocPla i  = SCon "soc_pla" `App` i
 pattern Observe p = SCon "observe" `App` p
 pattern Pr t      = SCon "Pr" `App` t
 pattern Prop1 i   = SCon "prop1" `App` i
-pattern QUD s     = SCon "QUD" `App` s
+pattern PopQUD s  = SCon "pop_QUD" `App` s
 
-pattern Add, And, Eq, GE, Mult, Normal, Or, UpdEpi, UpdCG, UpdHeight, UpdDTall, UpdSocPla, UpdProp1, UpdQUD :: Term -> Term -> Term
+pattern Add, And, Eq, GE, Mult, Normal, Or, UpdEpi, UpdCG, UpdHeight, UpdDTall, UpdSocPla, UpdProp1, PushQUD :: Term -> Term -> Term
 pattern Add x y         = SCon "add" `App` (Pair x y)
 pattern And p q         = SCon "(∧)" `App` p `App` q
 pattern Or p q          = SCon "(∨)" `App` p `App` q
@@ -89,7 +90,7 @@ pattern UpdHeight p i   = SCon "upd_height" `App` p `App` i
 pattern UpdDTall d s    = SCon "upd_d_tall" `App` d `App` s
 pattern UpdSocPla p i   = SCon "upd_soc_pla" `App` p `App` i
 pattern UpdProp1 b i    = SCon "upd_prop1" `App` b `App` i
-pattern UpdQUD q s      = SCon "upd_QUD" `App` q ` App` s
+pattern PushQUD q s     = SCon "push_QUD" `App` q ` App` s
 
 pattern Disj, ITE, Truncate :: Term -> Term -> Term -> Term
 pattern Disj x m n      = SCon "disj" `App` (Pair (Pair x m) n)
@@ -104,6 +105,12 @@ pattern LkUp c s = SCon c `App` s
 
 pattern Upd :: String -> Term -> Term -> Term
 pattern Upd c v s = SCon ('u' : 'p' : 'd' : '_' : c) `App` v `App` s
+
+pattern Pop :: String -> Term -> Term
+pattern Pop c s = SCon ('p' : 'o' : 'p' : '_' : c) `App` s
+
+pattern Push :: String -> Term -> Term -> Term
+pattern Push c v s = SCon ('p' : 'u' : 's' : 'h' : '_' : c) `App` v `App` s
 
 -- *** Convenience and smart constructors
 
@@ -136,12 +143,12 @@ getPP = lam s (Return (s & s))
 
 epi, cg, factor, observe, normalL, max', purePP, putPP, pr :: Term -> Term
 assert φ       = φ >>>= lam p (getPP >>>= lam s ((purePP (cg s)) >>>= lam c (putPP (upd_CG (let' i c (let' _' (observe (p @@ i)) (Return i))) s))))
-ask κ          = κ >>>= Lam "q" (getPP >>>= Lam "s" ((putPP (upd_QUD (Var "q") (Var "s")))))
+ask κ          = κ >>>= Lam "q" (getPP >>>= Lam "s" ((putPP (push_QUD (Var "q") (Var "s")))))
 epi i          = sCon "epi" @@ i
 cg s           = sCon "CG" @@ s
 upd_CG cg s    = sCon "upd_CG" @@ cg @@ s
-qud s          = sCon "QUD" @@ s
-upd_QUD q s    = sCon "upd_QUD" @@ q @@ s
+pop_qud s      = sCon "pop_QUD" @@ s
+push_QUD q s   = sCon "push_QUD" @@ q @@ s
 factor x       = sCon "factor" @@ x
 ling i         = sCon "ling" @@ i
 phil i         = sCon "phil" @@ i
@@ -167,7 +174,7 @@ normal x y  = sCon "Normal" @@ (x & y)
 let', respond :: Term -> Term -> Term -> Term
 let' (Var v)   = Let v
 respond f bg m = let' s bg m'
-  where m'     = let' _s' (m @@ s) (let' i (cg (Pi2 _s')) (f @@ max' (lam x (qud (Pi2 _s') @@ x @@ i))))
+  where m'     = let' _s' (m @@ s) (let' i (cg (Pi2 _s')) (f @@ max' (lam x (Pi1 (pop_qud (Pi2 _s')) @@ x @@ i))))
         s:_s':i:x:_ = map Var $ fresh [bg, m]
 
 -- | 'Num' instance for 'Term', just as a notational convenience.

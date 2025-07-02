@@ -20,7 +20,5 @@ import Framework.Lambda.Terms
 import Framework.Lambda.Types
 
 tauStates :: Sig
-tauStates = mkStateSig σ [ ("CG", P ι) ] <||> \case
-  Left "QUD"     -> Just (q ι α σ :→ α :→ ι :→ t)
-  Left "upd_QUD" -> Just ((α :→ ι :→ t) :→ σ :→ q ι α σ)
-  _              -> Nothing
+tauStates = mkStateSig σ [ ("CG", P ι) ] <||>
+            mkStackSig σ (q ι α) (popQ ι α) [ ("QUD", α :→ ι :→ t) ]

@@ -49,42 +49,59 @@ data Type = Atom String
 -- | Relations on types.
 type TypeRel = Type -> Type -> Bool
 
--- | Determine if two types are semantically equivalent.
-tyEq :: (TypeRel -> TypeRel) -> TypeRel
-tyEq cmpr α β = tyEq0 cmpr (applySubst substα α) (applySubst substβ β)
-  where tyEq0 :: (TypeRel -> TypeRel) -> TypeRel
-        tyEq0 cmpr α β = α == β || α `cmprTyEq0` β
+-- | Type-level reductions.
+type TypeRed = Type -> Maybe Type
 
-        cmprTyEq0 :: TypeRel
-        cmprTyEq0 = cmpr (tyEq0 cmpr)
+-- | Determine if two types are semantically equivalent, taking type reductions
+-- into account.
+tyEq :: TypeRed -> TypeRel
+tyEq f α β = applySubst substα α' == applySubst substβ β'
+  where α', β' :: Type
+        α' = applyRed f α
+        β' = applyRed f β
+
+        applyRed :: TypeRed -> Type -> Type
+        applyRed f ty = case f ty of
+                         Just ty' -> applyRed f ty'
+                         Nothing  -> descend f ty
+
+        descend :: TypeRed -> Type -> Type
+        descend f = \case
+          a@(Atom _)  -> a
+          ty1 :→ ty2  -> applyRed f ty1 :→ applyRed f ty2
+          Unit        -> Unit
+          ty1 :× ty2  -> applyRed f ty1 :× applyRed f ty2
+          P ty        -> P (applyRed f ty)
+          TyCon g tys -> TyCon g (map (applyRed f) tys)
+          v@(TyVar _) -> v
 
         substα, substβ :: Constr
         substα = zip (TyVar <$> αVars) (TyVar <$> newVars)
         substβ = zip (TyVar <$> βVars) (TyVar <$> newVars)
   
         αVars, βVars, newVars :: TyVars
-        αVars = getVars α
-        βVars = getVars β
+        αVars = getVars α'
+        βVars = getVars β'
         newVars = filter (flip notElem $ αVars ++ βVars) tyVars
 
-popTy :: TypeRel -> TypeRel
-popTy cmpr (TyCon ('p' : 'o' : 'p' : f) tys) β =
-  case last tys of
-    TyCon g tys' | f == g && length (init tys) == length (init tys') ->
-                     and (zipWith cmpr (init tys) (init tys')) &&
-                     last tys' `cmpr` β
-    TyCon g tys' | otherwise                                         ->
-                     case β of
-                       TyCon h tys'' | g == h && length (init tys') == length (init tys'') ->
-                                         and (zipWith cmpr (init tys') (init tys'')) &&
-                                         TyCon ("pop" ++ f) (init tys ++ [last tys']) `cmpr` last tys''
-    _                                                                 -> False
-popTy cmpr α β@(TyCon ('p' : 'o' : 'p' : f) tys) = popTy cmpr β α
-popTy _    _ _                                   = False
+-- | Match pop types to cancel out the types they pop.
+popTy :: TypeRed
+popTy = \case
+  TyCon ('p' : 'o' : 'p' : f) tys ->
+    case last tys of
+      TyCon g tys'
+        | f == g &&
+          length (init tys) == length (init tys') &&
+          and (zipWith (==) (init tys) (init tys'))  -> Just (last tys')
+      TyCon g tys'
+        | otherwise                                  ->
+          (\ty -> TyCon g (init tys' ++ [ty])) <$>
+          popTy (TyCon ("pop" ++ f) (init tys ++ [last tys']))
+  _                               -> Nothing
 
+-- | Semantic type equality, taking popable types into account.
 tyEq' :: TypeRel
--- tyEq' = tyEq popTy
-tyEq' = tyEq id
+tyEq' = tyEq popTy
 
 instance Show Type where
   show = \case

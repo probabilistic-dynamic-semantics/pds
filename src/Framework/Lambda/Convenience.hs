@@ -34,10 +34,8 @@ t = Atom "t"
 r = Atom "r"
 
 q, popQ :: Type -> Type -> Type -> Type
-q i q a = TyCon "Q" [i, q, a]
+q    i q a = TyCon "Q"    [i, q, a]
 popQ i q a = TyCon "popQ" [i, q, a]
-
--- ** Pattern synonyms and term abbreviations
 
 pattern SCon :: String -> Term
 pattern SCon x = Con (Left x)

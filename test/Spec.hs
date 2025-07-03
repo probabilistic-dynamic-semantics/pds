@@ -15,22 +15,22 @@ import Control.Monad.Writer
 import Framework.Lambda
 import Framework.Grammar
 import Framework.Target
--- import Test.Hspec
+import Test.Hspec
 
 main :: IO ()
-main = pure ()
--- main = hspec $ do
---   describe "factivityExample" $ do
---     it "yields the appropriate Stan model" $ do
---       stanOutput factivityExample `shouldBe` (factivityResult :: Model)
+-- main = pure ()
+main = hspec $ do
+  describe "factivityExample" $ do
+    it "yields the appropriate Stan model" $ do
+      stanOutput factivityExample `shouldBe` (factivityResult :: Model)
 
---   describe "scaleNormingExample" $ do
---     it "yields the appropriate Stan model" $ do
---       stanOutput scaleNormingExample `shouldBe` (scaleNormingResult :: Model)
+  describe "scaleNormingExample" $ do
+    it "yields the appropriate Stan model" $ do
+      stanOutput scaleNormingExample `shouldBe` (scaleNormingResult :: Model)
 
---   describe "likelihoodExample" $ do
---     it "yields the appropriate Stan model" $ do
---       stanOutput likelihoodExample `shouldBe` (likelihoodResult :: Model)
+  describe "likelihoodExample" $ do
+    it "yields the appropriate Stan model" $ do
+      stanOutput likelihoodExample `shouldBe` (likelihoodResult :: Model)
 
 getSemantics :: forall (p :: Project). Interpretation p SynSem => Int -> [String] -> Typed
 getSemantics n = sem . (indices !! n) . getList . flip (interpretations @p) 0

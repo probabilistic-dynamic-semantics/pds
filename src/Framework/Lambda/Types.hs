@@ -97,6 +97,7 @@ popTy = \case
         | otherwise                                  ->
           (\ty -> TyCon g (init tys' ++ [ty])) <$>
           popTy (TyCon ("pop" ++ f) (init tys ++ [last tys']))
+      _                                              -> Nothing
   _                               -> Nothing
 
 -- | Semantic type equality, taking popable types into account.

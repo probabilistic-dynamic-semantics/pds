@@ -126,17 +126,22 @@ probabilities = \case
   Pr (Let v (Normal x y) (Return (GE (Var v') t))) | v' == v -> Just (NormalCDF (- x) y t)
   _                                                          -> Nothing
 
--- | Computes functions on indices and states.
+-- | Computes functions on indices and states. These include reading and writing
+-- to locations of fixed type, as well as pushing to and popping from stacks,
+-- thus possibly modifying the type of the state.
 states :: DeltaRule
 states = \case
   LkUp c   (Upd  c' v _) | c' == c -> Just v
   LkUp c   (Upd  c' _ s) | c' /= c -> Just (LkUp c s)
   Upd  c v (Upd  c' _ s) | c' == c -> Just (Upd c v s)
   Pop  c   (Push c' v s) | c' == c -> Just (v & s)
-  Pop  c   (Push c' _ s) | c' /= c -> Just (Pop c s)
+  Pop  c   (Push c' v s) | c' /= c -> Just (v' & s')
+    where v', s' :: Term
+          v' = Pi1 (Pop c s)
+          s' = Push c' v (Pi2 (Pop c s))
   LkUp c   (Push _  _ s)           -> Just (LkUp c s)
   Pop  c   (Upd  c' v s)           -> Just (v' & s')
     where v', s' :: Term
           v' = Pi1 (Pop c s)
-          s' = Upd c' v (Pi1 (Pop c s))
+          s' = Upd c' v (Pi2 (Pop c s))
   _                                -> Nothing

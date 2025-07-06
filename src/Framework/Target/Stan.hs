@@ -42,6 +42,9 @@ stanShow :: Term -> String
 stanShow v@(Var _)         = show v
 stanShow x@(DCon _)        = show x
 stanShow (NormalCDF x y z) = "normal_cdf(" ++ stanShow z ++ ", " ++ stanShow x ++ ", " ++ stanShow y ++ ")"
+stanShow (Add x (Neg y))   = stanShow x ++ " - " ++ stanShow y
+stanShow (Add x y)         = stanShow x ++ " + " ++ stanShow y
+stanShow (Neg x)           = "-" ++ stanShow x
 
 lRender :: VarName -> Term -> String
 lRender v (Truncate (Normal x y) z w) = "truncated_normal_lpdf(" ++ v ++

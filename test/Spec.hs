@@ -67,4 +67,4 @@ likelihoodExample = asTyped tauAdj (betaDeltaNormal deltaRules . adjectivesRespo
 
 likelihoodResult :: Model
 likelihoodResult = Model [ ("v", "normal(0.0, 1.0)")
-                         , ("y", "normal_lpdf(y | normal_cdf(v, -0.0, 1.0), sigma)") ]
+                         , ("y", "normal_lpdf(y | 1.0 - normal_cdf(v, 0.0, 1.0), sigma)") ]

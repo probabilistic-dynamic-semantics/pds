@@ -123,7 +123,7 @@ probabilities = \case
   Pr (Bern x)                                                -> Just x
   Pr (Disj x t u)                                            -> Just (x * Pr t + (1 - x) * Pr u)
   Pr (Let v (Normal x y) (Return (GE t (Var v')))) | v' == v -> Just (NormalCDF x y t)
-  Pr (Let v (Normal x y) (Return (GE (Var v') t))) | v' == v -> Just (NormalCDF x y (- t))
+  Pr (Let v (Normal x y) (Return (GE (Var v') t))) | v' == v -> Just (1 - NormalCDF x y t)
   _                                                          -> Nothing
 
 -- | Computes functions on indices and states. These include reading and writing

@@ -68,7 +68,7 @@ pattern SocPla i  = SCon "soc_pla" `App` i
 pattern Observe p = SCon "observe" `App` p
 pattern Pr t      = SCon "Pr" `App` t
 pattern Prop1 i   = SCon "prop1" `App` i
-pattern PopQUD s  = SCon "pop_QUD" `App` s
+pattern PopQUD s  = Pop "QUD" s
 
 pattern Add, And, Eq, GE, Mult, Normal, Or, UpdEpi, UpdCG, UpdHeight, UpdDTall, UpdSocPla, UpdProp1, PushQUD :: Term -> Term -> Term
 pattern Add x y         = SCon "add" `App` (Pair x y)
@@ -118,6 +118,7 @@ b  = Var "b"
 c  = Var "c"
 d  = Var "d"
 i  = Var "i"
+j  = Var "j"
 k  = Var "k"
 m  = Var "m"
 n  = Var "n"
@@ -224,7 +225,12 @@ sampleOnly = \case
   _               -> False
 
 
--- ** Combining signatures and rules
-
+-- | Combining signatures and rules
 (<||>) :: Alternative m => (a -> m b) -> (a -> m b) -> a -> m b
 f <||> g = \x -> f x <|> g x
+
+-- | Overwrite one state or index onto another, given a list of relevant
+-- parameters.
+overwrite :: [String] -> Term -> Term -> Term
+overwrite []       _ j = j
+overwrite (c : cs) i j = Upd c (LkUp c i) (overwrite cs i j)

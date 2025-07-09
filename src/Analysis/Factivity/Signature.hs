@@ -11,7 +11,8 @@ Maintainer  : julian.grove@gmail.com
 Signature for factivity.
 -}
 
-module Analysis.Factivity.Signature ( tauFact
+module Analysis.Factivity.Signature ( contextParams
+                                    , tauFact
                                     ) where
 
 import Framework.Lambda.Convenience
@@ -21,16 +22,19 @@ import Framework.Lambda.Types
 import Theory.Signature
 
 tauFact :: Sig
-tauFact = tau0                                       <||>
-          tauNames                                   <||>
-          tauStates                                  <||>
-          mkStateSig ι [ ("epi", e :→ (ω :→ t) :→ t)
-                       , ("ling", e :→ t)
-                       , ("phil", e :→ t) ]          <||>
-          mkStateSig σ [ ("tau_know", t) ]
+tauFact = tau0                                                 <||>
+          tauNames                                             <||>
+          tauStates                                            <||>
+          mkStateSig ι [ ( "epi"      , e :→ (ω :→ t) :→ t )
+                       , ( "ling"     , e :→ t             )
+                       , ( "phil"     , e :→ t             ) ] <||>
+          mkStateSig σ [ ( "tau_know" , t                  ) ]
 
 tauNames :: Sig
 tauNames = \case
   Left "j" -> Just e
   Left "b" -> Just e
   _        -> Nothing
+
+contextParams :: [String]
+contextParams = []

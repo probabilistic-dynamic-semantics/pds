@@ -53,7 +53,7 @@ instance Interpretation Adjectives SynSem where
                                    }
                                , SynSem {
                                    syn = Base "ap",
-                                   sem = ty tauAdj (lam s (purePP (lam x (lam i (sCon "(≥)" @@ (sCon "height" @@ i @@ x) @@ (sCon "d_tall" @@ s)))) @@ s))
+                                   sem = ty tauAdj (lam s (purePP (lam x (lam i (sCon "(≥)" @@ (sCon "height" @@ i @@ x) @@ (sCon "d_tall" @@ i)))) @@ s))
                                         } ]
             "jo"            -> [ SynSem {
                                    syn = Base "np",
@@ -101,7 +101,13 @@ instance Interpretation Adjectives SynSem where
                                    } ]
             "likely"      -> [ SynSem {
                                  syn = Base "s" \\ Base "deg" // Base "s",
-                                 sem = ty tauAdj (lam s (purePP (lam p (lam d (lam _' (sCon "(≥)" @@ (Pr (let' i (CG s) (Return (p @@ i)))) @@ d)))) @@ s))
+                                 sem = ty tauAdj (
+                                     lam s (purePP (lam p (lam d (lam i (
+                                                                     sCon "(≥)" @@ (
+                                                                         Pr (let' j (CG s) (Return (p @@ (overwrite contextParams i j))))
+                                                                         ) @@ d
+                                                                     )))) @@ s)
+                                     )
                                  } ]
             "how"         -> [ SynSem {
                                  syn =  Base "qDeg" // (Base "s" // Base "ap") // (Base "ap" \\ Base "deg"),
@@ -162,13 +168,8 @@ scaleNormingPrior = Return (upd_CG cg' ϵ)
 
 -- | Prior to be used for the likelihood example.
 likelihoodPrior :: Term
-likelihoodPrior = let' x (normal 0 1) (Return (UpdDTall x (upd_CG cg' ϵ)))
-  where cg' = let' y (normal 0 1) (let' w (LogitNormal 0 1) (let' b (Bern w) (Return (UpdHeight (lam z y) (UpdSocPla (lam z b) _0)))))
-
--- | Prior to be used for the likelihood example for relative adjectives (/tall/).
-likelihoodPriorRelative :: Term
-likelihoodPriorRelative = let' x (normal 0 1) (let' y (normal 0 1) (Return (UpdDTall x (upd_CG cg' ϵ))))
-  where cg' = let' y (normal 0 1) (let' w (LogitNormal 0 1) (let' b (Bern w) (Return (UpdHeight (lam z y) (UpdSocPla (lam z b) _0)))))
+likelihoodPrior = Return (upd_CG cg' ϵ)
+  where cg' = let' x (normal 0 1) (let' y (normal 0 1) (let' w (LogitNormal 0 1) (let' b (Bern w) (Return (Upd "d_tall" x (Upd "height" (lam z y) (Upd "soc_pla" (lam z b) _0)))))))
 
 -- | Respones function to be used for adjective examples.
 adjectivesRespond :: Term -> Term -> Term

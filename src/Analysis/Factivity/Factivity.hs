@@ -85,7 +85,13 @@ instance Interpretation Factivity SynSem where
                                  } ]
             "likely"      -> [ SynSem {
                                  syn = Base "s" \\ Base "deg" // Base "s",
-                                 sem = ty tauFact (lam s (purePP (lam p (lam d (lam _' (sCon "(≥)" @@ (Pr (let' i (CG s) (Return (p @@ i)))) @@ d)))) @@ s))
+                                 sem = ty tauFact (
+                                     lam s (purePP (lam p (lam d (lam i (
+                                                                     sCon "(≥)" @@ (
+                                                                         Pr (let' j (CG s) (Return (p @@ (overwrite contextParams i j))))
+                                                                         ) @@ d
+                                                                     )))) @@ s)
+                                     )
                                  } ]
             "how"         -> [ SynSem {
                                  syn =  Base "qDeg" // (Base "s" // Base "ap") // (Base "ap" \\ Base "deg"),

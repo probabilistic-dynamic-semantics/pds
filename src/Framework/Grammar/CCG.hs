@@ -61,3 +61,7 @@ class Interpretation (p :: Project) m where
   lexica   :: [Lexicon m]
   combineR :: m -> m -> [m]
   combineL :: m -> m -> [m] 
+
+class Indices (p :: Project) where
+  context :: [String]
+  world   :: [String]

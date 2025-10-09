@@ -20,3 +20,54 @@ Applications of the framework can also be found in [Grove and White (2025a)](htt
   - An encoding of theories of formal pragmatics, including common grounds and Questions Under Discussion (QUDs).
 - [`Analysis`](https://github.com/probabilistic-dynamic-semantics/pds/tree/main/src/Analysis):
   - Analyses of particular natural language phenomena, including factivity and vagueness.
+
+## Documentation
+
+See both the text [Probabilistic Dynamic Semantics](https://lingbuzz.net/lingbuzz/008478), as well as the ESSLI 2025 Summer School [Course Notes](https://juliangrove.github.io/esslli-2025/notes/).
+
+## Installation
+
+You can install the library and open a repl by cloning this repository doing:
+
+```
+cd pds
+cabal v2-repl --repl-options="-ghci-script .ghci"
+```
+
+A [`Nix`](https://nixos.org/)-based installation is also possible, by doing:
+
+```
+cd pds
+nix-shell --run "cabal v2-repl --repl-options=\"-ghci-script .ghci\""
+```
+
+## Quick start
+
+There is a test-suite under active development in [here](https://github.com/probabilistic-dynamic-semantics/pds/blob/readme/test/Spec.hs).
+To load the examples which are currently implemented in [`Analysis`], install the library and load the test-suite:
+
+```
+ghci> :l test/Spec.hs
+```
+
+There are three models in the test-suite which can be printed out.
+The model on factivity can be gotten by doing:
+
+```
+stanOutput factivityExample
+```
+
+It yields the following result:
+
+```
+model {
+  // FIXED EFFECTS
+  v ~ logit_normal(0.0, 1.0);
+  w ~ logit_normal(0.0, 1.0);
+
+  // LIKELIHOOD
+  target += log_mix(v, truncated_normal_lpdf(y | 1.0, sigma, 0.0, 1.0), truncated_normal_lpdf(y | w, sigma, 0.0, 1.0));
+}
+```
+
+The other two models are `scaleNormingExample` and `likelihoodExample`.

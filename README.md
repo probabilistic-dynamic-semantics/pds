@@ -23,7 +23,7 @@ Applications of the framework can also be found in [Grove and White (2025a)](htt
 
 ## Documentation
 
-See both the text [Probabilistic Dynamic Semantics](https://lingbuzz.net/lingbuzz/008478), as well as the ESSLI 2025 Summer School [Course Notes](https://juliangrove.github.io/esslli-2025/notes/).
+See both the text [Probabilistic Dynamic Semantics](https://lingbuzz.net/lingbuzz/008478) and the ESSLLI 2025 Summer School [Course Notes](https://juliangrove.github.io/esslli-2025/notes/).
 
 ## Installation
 

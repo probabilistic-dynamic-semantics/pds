@@ -60,13 +60,17 @@ stanOutput factivityExample
 It yields the following result:
 
 ```
+parameters {
+  real<lower=0.0, upper=1.0> v;
+  real<lower=0.0, upper=1.0> w;
+  real<lower=0.0, upper=1.0> u;
+}
+
 model {
-  // FIXED EFFECTS
   v ~ logit_normal(0.0, 1.0);
   w ~ logit_normal(0.0, 1.0);
 
-  // LIKELIHOOD
-  target += log_mix(v, truncated_normal_lpdf(y | 1.0, sigma, 0.0, 1.0), truncated_normal_lpdf(y | w, sigma, 0.0, 1.0));
+  target += log_mix(v, truncated_normal_lpdf(y | 1.0, u, 0.0, 1.0), truncated_normal_lpdf(y | w, u, 0.0, 1.0));
 }
 ```
 

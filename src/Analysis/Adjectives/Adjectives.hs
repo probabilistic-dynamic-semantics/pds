@@ -182,4 +182,4 @@ likelihoodPrior = Return (upd_CG cg' ϵ)
 
 -- | Response function to be used for adjectives examples.
 adjectivesRespond :: Term -> Term -> Term
-adjectivesRespond = respond (lam x (Normal x (Var "sigma")))
+adjectivesRespond = respond (lam x (Let "sigma" (Truncate Uniform 0 1) (Normal x (Var "sigma"))))

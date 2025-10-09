@@ -74,10 +74,11 @@ tauProbProg :: Sig
 tauProbProg = \case
   Left "Bernoulli"    -> Just (r :→ P t)
   Left "Beta"         -> Just (r :× r :→ P r)
-  Left "disj"         -> Just (r :× P α :× P α :→ P α)
   Left "Normal"       -> Just (r :× r :→ P r)
   Left "Normal_cdf"   -> Just (r :× r :→ r :→ r)
   Left "Logit_normal" -> Just (r :× r :→ P r)
+  Left "Uniform"      -> Just (P r)
+  Left "disj"         -> Just (r :× P α :× P α :→ P α)
   Left "observe"      -> Just (t :→ P Unit)
   Left "factor"       -> Just (r :→ P Unit)
   Left "Truncate"     -> Just (r :× r :→ P r :→ P r)

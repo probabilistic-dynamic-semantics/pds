@@ -156,4 +156,4 @@ factivityPrior = let' x (LogitNormal 0 1) (let' y (LogitNormal 0 1) (let' z (Log
 
 -- | Response function to be used for the factivity example.
 factivityRespond :: Term -> Term -> Term
-factivityRespond = respond (lam x (Truncate (Normal x (Var "sigma")) 0 1))
+factivityRespond = respond (lam x (Let "sigma" (Truncate Uniform 0 1) (Truncate (Normal x (Var "sigma")) 0 1)))

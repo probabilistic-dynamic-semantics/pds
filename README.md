@@ -43,7 +43,7 @@ nix-shell --run "cabal v2-repl --repl-options=\"-ghci-script .ghci\""
 
 ## Quick start
 
-There is a test-suite under active development in [here](https://github.com/probabilistic-dynamic-semantics/pds/blob/readme/test/Spec.hs).
+There is a test-suite under active development [here](https://github.com/probabilistic-dynamic-semantics/pds/blob/readme/test/Spec.hs).
 To load the examples which are currently implemented in [`Analysis`], install the library and load the test-suite:
 
 ```

@@ -10,7 +10,7 @@ Large-scale inference datasets—and the statistical models they require—have 
 As a library, it encodes the ideas described in [Probabilistic Dynamic Semantics](https://lingbuzz.net/lingbuzz/008478) by [Julian Grove](https://juliangrove.github.io/) and [Aaron Steven White](https://aaronstevenwhite.io/).
 Applications of the framework can also be found in [Grove and White (2025a)](https://ling.auf.net/lingbuzz/007450) and [Grove and White (2025b)](https://journals.linguisticsociety.org/proceedings/index.php/ELM/article/view/5857).
 
-### Features
+### Components of the library
 
 - [`Framework`](https://github.com/probabilistic-dynamic-semantics/pds/tree/main/src/Framework):
   - An encoding of Combinatory Categorial Grammar (CCG)-based grammar fragments, as well as a CKY-style parser with string-based (instead of span-based) memoization.

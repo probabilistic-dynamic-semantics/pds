@@ -14,7 +14,7 @@ Applications of the framework can also be found in [Grove and White (2025a)](htt
 
 - [`Framework`](https://github.com/probabilistic-dynamic-semantics/pds/tree/main/src/Framework):
   - An encoding of Combinatory Categorial Grammar (CCG)-based grammar fragments, as well as a CKY-style parser with string-based (instead of span-based) memoization.
-  - A framework for typed λ-calculus based on δ-rules, which transform complex semantic representations into simpler probabilistic models.
+  - A framework for typed λ-calculus based on δ-rules, which transform complex semantic representations into simpler (but equivalent) probabilistic models.
   - Code for transforming typed λ-terms into models in the [Stan](https://mc-stan.org/) programming language.
 - [`Theory`](https://github.com/probabilistic-dynamic-semantics/pds/tree/main/src/Theory):
   - An encoding of theories of formal pragmatics, including common grounds and Questions Under Discussion (QUDs).

@@ -58,16 +58,24 @@ cleanUp = \case
 -- | Marginalizes out certain distributions; some other stuff.
 disjunctions :: DeltaRule
 disjunctions = \case
-  Let  b (Bern x)     k                  -> Just (Disj x
-                                                  (subst b Tr k) (subst b Fa k)
-                                                 )
-  Let  v (Disj x m n) k                  -> Just (Disj x
-                                                  (Let v m k) (Let v n k)
-                                                 )
-  Disj _ m            n         | m == n -> Just m
-  Disj _ m            Undefined          -> Just m
-  Disj _ Undefined    n                  -> Just n
-  _                                      -> Nothing
+  Let  b (Bern x)     k                     -> Just (Disj x
+                                                     (subst b Tr k)
+                                                     (subst b Fa k)
+                                                    )
+  Let  v (Disj x m n) k                     -> Just (Disj x
+                                                     (Let v m k)
+                                                     (Let v n k)
+                                                    )
+  Disj x (Let v m k) (Let v' n k') | m == n -> Just (Let v m (
+                                                        Disj x
+                                                          k
+                                                          (subst v' (Var v) k')
+                                                        )
+                                                    )
+  Disj _ m            n            | m == n -> Just m
+  Disj _ m            Undefined             -> Just m
+  Disj _ Undefined    n                     -> Just n
+  _                                         -> Nothing
 
 -- | Computes syntactic equalities.
 equality :: DeltaRule
@@ -131,17 +139,19 @@ probabilities = \case
 -- thus possibly modifying the type of the state.
 states :: DeltaRule
 states = \case
-  LkUp c   (Upd  c' v _) | c' == c -> Just v
-  LkUp c   (Upd  c' _ s) | c' /= c -> Just (LkUp c s)
-  Upd  c v (Upd  c' _ s) | c' == c -> Just (Upd c v s)
-  Pop  c   (Push c' v s) | c' == c -> Just (v & s)
-  Pop  c   (Push c' v s) | c' /= c -> Just (v' & s')
+  LkUp c (Upd  c' v _)   | c' == c    -> Just v
+  LkUp c (Upd  c' _ s)   | c' /= c    -> Just (LkUp c s)
+  Upd  c v (Upd  c' _ s) | c' == c    -> Just (Upd c v s)
+  Upd  c (LkUp c' s ) s' | c' == c &&
+                           s' == s    -> Just s
+  Pop  c (Push c' v s)   | c' == c    -> Just (v & s)
+  Pop  c (Push c' v s)   | c' /= c    -> Just (v' & s')
     where v', s' :: Term
           v' = Pi1 (Pop c s)
           s' = Push c' v (Pi2 (Pop c s))
-  LkUp c   (Push _  _ s)           -> Just (LkUp c s)
-  Pop  c   (Upd  c' v s)           -> Just (v' & s')
+  LkUp c   (Push _  _ s)              -> Just (LkUp c s)
+  Pop  c   (Upd  c' v s)              -> Just (v' & s')
     where v', s' :: Term
           v' = Pi1 (Pop c s)
           s' = Upd c' v (Pi2 (Pop c s))
-  _                                -> Nothing
+  _                                   -> Nothing

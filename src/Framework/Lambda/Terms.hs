@@ -174,9 +174,10 @@ betaDeltaNormal delta = continue . \case
         Return t  -> Return (bdnd t)
         Let v t u -> case bdnd t of
                        Return t'  -> bdnd (subst v t' u)
-                       Let w t' x -> bdnd (Let fr t'
-                                           (Let v (subst w (Var fr) x) u)
-                                          )
+                       Let w t' x -> bdnd (
+                         Let fr t'
+                           (Let v (subst w (Var fr) x) u)
+                         )
                          where fr:esh = fresh [u, x]
                        t'         -> Let v t' (bdnd u)
   where continue :: Term -> Term

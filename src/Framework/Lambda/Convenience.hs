@@ -43,21 +43,23 @@ pattern SCon x = Con (Left x)
 pattern DCon :: Double -> Term
 pattern DCon x = Con (Right x)
 
-pattern Fa, GetPP, One, Zero, Tr, Undefined :: Term
+pattern Fa, GetPP, One, Zero, Tr, Undefined, Uniform :: Term
 pattern Fa        = SCon "F"
 pattern GetPP     = Lam "s" (Return (Var "s" `Pair` Var "s"))
 pattern One       = DCon 1
 pattern Zero      = DCon 0
 pattern Tr        = SCon "T"
 pattern Undefined = SCon "#"
+pattern Uniform   = SCon "Uniform"
 
-pattern Bern, CG, Factor, Indi, Neg, Height, DTall, Observe, Pr, Epi, SocPla :: Term -> Term
+pattern Bern, CG, Factor, Indi, Neg, Height, DTall, Pr, Epi, SocPla, Observe :: Term -> Term
 pattern Bern p    = SCon "Bernoulli" `App` p
 pattern CG s      = SCon "CG" `App` s
 pattern Factor x  = SCon "factor" `App` x
 pattern Indi p    = SCon "𝟙" `App` p
 pattern Max pred  = SCon "max" `App` pred
 pattern Neg x     = SCon "neg" `App` x
+pattern Observe t = SCon "observe" `App` t
 pattern Epi i     = SCon "epi" `App` i
 pattern TauKnow s = SCon "tau_know" `App` s
 pattern Ling i    = SCon "ling" `App` i
@@ -65,7 +67,6 @@ pattern Phil i    = SCon "phil" `App` i
 pattern Height i  = SCon "height" `App` i
 pattern DTall s   = SCon "d_tall" `App` s
 pattern SocPla i  = SCon "soc_pla" `App` i
-pattern Observe p = SCon "observe" `App` p
 pattern Pr t      = SCon "Pr" `App` t
 pattern Prop1 i   = SCon "prop1" `App` i
 pattern PopQUD s  = Pop "QUD" s
@@ -140,8 +141,8 @@ prop2 = sCon "prop2"
 
 getPP = lam s (Return (s & s))
 
-epi, cg, factor, observe, normalL, max', purePP, putPP, pr :: Term -> Term
-assert φ       = φ >>>= lam p (getPP >>>= lam s ((purePP (cg s)) >>>= lam c (putPP (upd_CG (let' i c (let' _' (observe (p @@ i)) (Return i))) s))))
+epi, cg, factor, normalL, max', purePP, putPP, pr :: Term -> Term
+assert φ       = φ >>>= lam p (getPP >>>= lam s ((purePP (cg s)) >>>= lam c (putPP (upd_CG (let' i c (observe (p @@ i) (Return i))) s))))
 ask κ          = κ >>>= Lam "q" (getPP >>>= Lam "s" ((putPP (push_QUD (Var "q") (Var "s")))))
 epi i          = sCon "epi" @@ i
 cg s           = sCon "CG" @@ s
@@ -153,27 +154,34 @@ ling i         = sCon "ling" @@ i
 phil i         = sCon "phil" @@ i
 max' pred      = sCon "max" @@ pred
 normalL x      = normal x (sCon "σ")
-observe x      = sCon "observe" @@ x
 purePP t       = Lam fr (Return (t & Var fr))
   where fr:esh = fresh [t]
 putPP s        = Lam fr (Return (TT & s))
   where fr:esh = fresh [s]
 pr t           = sCon "Pr" @@ t
 
-(>>>=), (<**>), (<$$>), lam, normal :: Term -> Term -> Term
+view, set, pop, push :: String -> Term
+view c = lam s (Return ((sCon c @@ s) & s))
+set  c = lam x (lam s (Return (TT & Upd c x s)))
+pop  c = lam s (Return (Pop c s))
+push c = lam x (lam s (Return (TT & Push c x s)))
+
+(>>>=), (<**>), (<$$>), lam, normal, observe:: Term -> Term -> Term
 t >>>= u    = lam fr (let' e (t @@ fr) (u @@ Pi1 e @@ Pi2 e))
   where fr:e:sh = map Var $ fresh [t, u]
-m >>> n     = m >>>= (lam _' n)
+m >>> n     = m >>>= (lam fr n)
+  where fr:esh = map Var $ fresh [n]
 t <**> u    = t >>>= (lam fr (u >>>= (lam e (purePP (fr @@ e)))))
   where fr:e:sh = map Var $ fresh [t, u]
 t <$$> u    = purePP t Framework.Lambda.Convenience.<**> u
 lam (Var v) = Lam v
 normal x y  = sCon "Normal" @@ (x & y)
+observe x y = Let "_" (sCon "observe" @@ x) y
 
 let', respond :: Term -> Term -> Term -> Term
 let' (Var v)   = Let v
 respond f bg m = let' s bg m'
-  where m'     = let' _s' (m @@ s) (let' i (cg (Pi2 _s')) (f @@ max' (lam x (Pi1 (pop_qud (Pi2 _s')) @@ x @@ i))))
+  where m'     = let' _s' (m @@ s) (let' i (cg (Pi2 _s')) (f @@ (max' (lam x (Pi1 (pop_qud (Pi2 _s')) @@ x @@ i)))))
         s:_s':i:x:_ = map Var $ fresh [bg, m]
 
 -- | 'Num' instance for 'Term', just as a notational convenience.

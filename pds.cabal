@@ -18,6 +18,7 @@ library
                  , Analysis.Factivity.Factivity
                  , Analysis.Factivity.Signature
                  , Framework.Grammar
+                 , Framework.Grammar.Convenience
                  , Framework.Grammar.CCG
                  , Framework.Grammar.Lexica.SynSem
                  , Framework.Grammar.Lexica.SynSem.Convenience

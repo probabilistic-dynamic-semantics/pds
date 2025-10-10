@@ -11,8 +11,7 @@ Maintainer  : julian.grove@gmail.com
 Signature for factivity.
 -}
 
-module Analysis.Factivity.Signature ( contextParams
-                                    , tauFact
+module Analysis.Factivity.Signature ( tauFact
                                     ) where
 
 import Framework.Lambda.Convenience
@@ -35,6 +34,3 @@ tauNames = \case
   Left "j" -> Just e
   Left "b" -> Just e
   _        -> Nothing
-
-contextParams :: [String]
-contextParams = []

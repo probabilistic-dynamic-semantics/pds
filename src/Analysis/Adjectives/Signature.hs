@@ -11,8 +11,7 @@ Maintainer  : julian.grove@gmail.com
 Signature for gradbale adjectives.
 -}
 
-module Analysis.Adjectives.Signature ( contextParams
-                                     , tauAdj
+module Analysis.Adjectives.Signature ( tauAdj
                                      ) where
 
 import Framework.Lambda.Convenience
@@ -36,6 +35,3 @@ tauNames = \case
   Left "j" -> Just e
   Left "b" -> Just e
   _        -> Nothing
-
-contextParams :: [String]
-contextParams = ["d_tall"]

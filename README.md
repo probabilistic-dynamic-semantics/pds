@@ -34,7 +34,7 @@ cd pds
 cabal v2-repl --repl-options="-ghci-script .ghci"
 ```
 
-A [`Nix`](https://nixos.org/)-based installation is also possible by doing:
+A [Nix](https://nixos.org/)-based installation is also possible by doing:
 
 ```
 cd pds

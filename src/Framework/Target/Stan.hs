@@ -21,99 +21,96 @@ import Framework.Lambda
 import Framework.Grammar
 import Theory.Signature
 
-type Distr   = String
-type VarName = String
+type Distr      = (String, [String])
+type VarName    = String
+type Bounds     = (Double, Double)
+type Params     = [(VarName, Maybe Bounds, Distr)]
+type Likelihood = (VarName, Distr)
 
-data Params = Params { pars :: [(VarName, Distr)] } deriving (Eq)
+data StanModel = StanModel { params :: Params, likelihood :: Likelihood }
+  deriving (Eq)
 
-instance Show Params where
-  show (Params m) = "parameters {\n" ++ render m ++ "}"
-    where render []                = ""
-          render ((v, bounds) : s) = "  real" ++ bounds ++ " " ++
-                                     v ++ ";\n" ++ render s
+makeParams :: Term -> Params
+makeParams = \case
+  Let vn (LogitNormal m s)           t
+    -> (vn, Just (0, 1), ("logit_normal", [show m, show s])) : makeParams t
+  Let vn (Normal m s)                t
+    -> (vn, Nothing, ("normal", [show m, show s]))           : makeParams t
+  Let vn (Uniform (DCon a) (DCon b)) t
+    -> (vn, Just (a, b), ("uniform", [show a, show b]))      : makeParams t
+  _ -> []
 
-data Model = Model { statements :: [(VarName, Distr)] } deriving (Eq)
+makeLikelihood :: Term -> Likelihood
+makeLikelihood = \case
+  Let _ _ t -> makeLikelihood t
+  (Normal m s) -> ("y", ("normal", [show m, show s]))
 
-instance Show Model where
-  show (Model m) = "model {\n" ++ render m ++ "}"
-    where render []           = ""
-          render [(v, d)]     = " \n  "  ++
-                                "target += " ++ d ++ ";\n"
-          render ((v, d) : s) = "  " ++ v ++ " ~ " ++ d ++ ";\n" ++ render s
+makeStanModel :: Term -> StanModel
+makeStanModel t = StanModel { params = makeParams t
+                            , likelihood = makeLikelihood t
+                            }
 
-data Stan = Stan { params :: Params, model :: Model } deriving (Eq)
+data Block = Data
+           | Functions
+           | GeneratedQuantities
+           | Model
+           | Parameters
+           | TransformedData
+           | TransformedParameters
+  deriving (Eq)
 
-instance Show Stan where
-  show (Stan params model) = show params ++ "\n \n" ++ show model
+indent :: String -> String
+indent s = "  " ++ s
 
-data Error = TypeError deriving (Eq)
+distrType :: Distr -> String
+distrType = \case
+  ("bernoulli"  , _) -> "int"
+  ("exponential", _) -> "real"
+  ("logistic"   , _) -> "real"
+  ("normal"     , _) -> "real"
+  ("uniform"    , _) -> "real"
 
-instance Show Error where
-  show TypeError = "Error: Term does not have type P r!"
+renderParams :: StanModel -> String
+renderParams = \case
+  StanModel [] _ -> ""
+  StanModel ((vn, Just (l, u), d) : ps) lik
+    -> indent (distrType d) ++ "<lower=" ++ show l ++ ", upper=" ++ show u ++
+       "> " ++ vn ++ ";\n" ++ renderParams (StanModel ps lik)
+  StanModel ((vn, _          , d) : ps) lik
+    -> indent (distrType d) ++ " " ++ vn ++ ";\n" ++
+       renderParams (StanModel ps lik)
 
-stanShow :: Term -> String
-stanShow v@(Var _)         = show v
-stanShow x@(DCon _)        = show x
-stanShow (NormalCDF x y z) = "normal_cdf(" ++ stanShow z ++ ", " ++
-                             stanShow x ++ ", " ++ stanShow y ++ ")"
-stanShow (Add x (Neg y))   = stanShow x ++ " - " ++ stanShow y
-stanShow (Add x y)         = stanShow x ++ " + " ++ stanShow y
-stanShow (Neg x)           = "-" ++ stanShow x
+renderModel :: StanModel -> String
+renderModel m = indent "// PRIORS\n\n" ++ renderPriors (params m) ++ "\n\n" ++
+                indent "// LIKELIHOOD\n\n" ++ renderLikelihood (likelihood m)
+  where renderPriors :: Params -> String
+        renderPriors = \case
+          [] -> ""
+          (vn, _, (name, args)) : ps
+            -> indent vn ++ " ∼ " ++ name ++ "(" ++ renderArgs args ++ ");\n" ++
+               renderPriors ps
+        renderLikelihood :: Likelihood -> String
+        renderLikelihood (vn, (name, args)) = indent vn ++ " ∼ " ++ name ++
+                                              "(" ++ renderArgs args ++ ");\n"
+        renderArgs :: [String] -> String
+        renderArgs []             = ""
+        renderArgs (a:rgs@(r:gs)) = a ++ ", " ++ renderArgs rgs
+        renderArgs (a:rgs)        = a ++ renderArgs rgs
 
-paramsRender :: Term -> String
-paramsRender (Normal x y)      = ""
-paramsRender (LogitNormal x y) = "<lower=0.0, upper=1.0>"
-paramsRender Uniform           = ""
-paramsRender (Truncate _ x y)  = "<lower=" ++ stanShow x ++
-                                 ", upper=" ++ stanShow y ++ ">"
-
-lRender :: VarName -> Term -> String
-lRender v (Truncate (Normal x y) z w) = "truncated_normal_lpdf(" ++ v ++
-                                        " | " ++ show x ++ ", " ++ show y ++
-                                        ", " ++ show z ++ ", " ++ show w ++ ")"
-lRender v (Normal x y)                = "normal_lpdf(" ++ v ++
-                                        " | " ++ stanShow x ++ ", " ++
-                                        stanShow y ++ ")"
-lRender v (Disj x y z)                = "log_mix(" ++ stanShow x ++ ", " ++
-                                        lRender v y ++ ", " ++
-                                        lRender v z ++ ")" 
-
-pRender :: Term -> String
-pRender (Normal x y)           = "normal(" ++ stanShow x ++ ", " ++
-                                 stanShow y ++ ")"
-pRender (LogitNormal x y)      = "logit_normal(" ++ stanShow x ++ ", " ++
-                                 stanShow y ++ ")"
-pRender (Truncate m x y)       = pRender m ++ " T[" ++ stanShow x ++ ", " ++
-                                 stanShow y ++ "]"
-pRender x = error $ show x
-
-toStanParams :: Term -> Writer [Error] Params
-toStanParams = \case
-  t         | typeOf (ty tau0 t) /= Just (P (Atom "r")) -> do
-                tell [TypeError]
-                pure (Params [])
-  Let x y z -> (\rest -> Params $ (x, paramsRender y) : pars rest) <$>
-                   toStanParams z
-  _ -> pure (Params [])
-
-toStanModel :: Term -> Writer [Error] Model
-toStanModel = \case
-  t         | typeOf (ty tau0 t) /= Just (P (Atom "r")) -> do
-                tell [TypeError]
-                pure (Model [])
-  Let _ Uniform z                                       -> toStanModel z
-  Let _ (Truncate Uniform _ _) z                        -> toStanModel z
-  t@(Let _ _ _)                                         -> toStanModel' t
-    where toStanModel' (Let x y z) = do
-            yResult <- toStanModel' y
-            case yResult of
-              Model ((_, distr) : ys) -> do
-                Model zs      <- toStanModel z
-                pure $ Model ((x, distr) : ys ++ zs)
-          toStanModel' result = pure $ Model [("", pRender result)]
-  result                                                -> do
-    pure (Model [("y", lRender "y" result)])
-
-
--- >>> Truncate Uniform 0 1
--- Truncate(⟨0.0, 1.0⟩)(Uniform)
+render :: Block -> StanModel -> String
+render = \case
+  Model      -> wrapWith "model"      . renderModel
+  Parameters -> wrapWith "parameters" . renderParams
+  where wrapWith block contents = block ++ " {\n" ++ contents ++ "}"
+                  
+stan :: Typed -> IO ()
+stan t = do putStrLn "Checking type..."
+            case typeOf t of
+              Nothing -> putStrLn "Your model isn't well-typed!"
+              Just ty -> if   ty /= P r
+                then putStrLn $ "The type of your model is" ++ show ty ++
+                     ", not P r!"
+                else putStrLn $ show ty ++ "!\nYour Stan model:\n\n" ++
+                     render Parameters (makeStanModel t') ++ "\n\n" ++
+                     render Model (makeStanModel t')
+  where t' = termOf t

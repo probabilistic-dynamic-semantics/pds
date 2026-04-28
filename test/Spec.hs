@@ -36,7 +36,7 @@ main = pure ()
 getSemantics :: forall (p :: Project). Interpretation p SynSem => Int -> [String] -> Typed
 getSemantics n = sem . (indices !! n) . getList . flip (interpretations @p) 0
   where indices = head : map (\f -> f . tail) indices
-stanOutput pp   = Stan (fst (runWriter (toStanParams (termOf pp)))) (fst (runWriter (toStanModel (termOf pp))))
+-- stanOutput pp   = Stan (fst (runWriter (toStanParams (termOf pp)))) (fst (runWriter (toStanModel (termOf pp))))
 
 deltaRules = arithmetic <||> states <||> disjunctions <||> cleanUp <||> maxes <||> probabilities <||> logical <||> ite <||> observations
   
@@ -46,10 +46,10 @@ discourse  = ty tauFact $ assert s1 >>> ask q1
 
 factivityExample = asTyped tauFact (betaDeltaNormal deltaRules . factivityRespond factivityPrior) discourse
 
-factivityResult :: Model
-factivityResult = Model [ ("v", "logit_normal(0.0, 1.0)")
-                        , ("w", "logit_normal(0.0, 1.0)")
-                        , ("y", "log_mix(v, truncated_normal_lpdf(y | 1.0, sigma, 0.0, 1.0), truncated_normal_lpdf(y | w, sigma, 0.0, 1.0))") ]
+-- factivityResult :: Model
+-- factivityResult = Model [ ("v", "logit_normal(0.0, 1.0)")
+                        -- , ("w", "logit_normal(0.0, 1.0)")
+                        -- , ("y", "log_mix(v, truncated_normal_lpdf(y | 1.0, sigma, 0.0, 1.0), truncated_normal_lpdf(y | w, sigma, 0.0, 1.0))") ]
 
 s1'        = termOf $ getSemantics @Adjectives 1 ["jo", "is", "a", "soccer player"] 
 q1'        = termOf $ getSemantics @Adjectives 0 ["how", "tall", "jo", "is"]
@@ -57,18 +57,18 @@ discourse' = ty tauAdj $ assert s1' >>> ask q1'
 
 scaleNormingExample = asTyped tauAdj (betaDeltaNormal deltaRules . adjectivesRespond scaleNormingPrior) discourse'
 
-scaleNormingResult :: Model
-scaleNormingResult = Model [ ("w", "normal(0.0, 1.0)")
-                           , ("y", "normal_lpdf(y | w, sigma)") ]
+-- scaleNormingResult :: Model
+-- scaleNormingResult = Model [ ("w", "normal(0.0, 1.0)")
+                           -- , ("y", "normal_lpdf(y | w, sigma)") ]
 
 q1''        = termOf $ getSemantics @Adjectives 0 ["how", "likely", "that", "jo", "is", "tall"]
 discourse'' = ty tauAdj $ assert s1' >>> ask q1''
 
 likelihoodExample = asTyped tauAdj (betaDeltaNormal deltaRules . adjectivesRespond likelihoodPrior) discourse''
 
-likelihoodResult :: Model
-likelihoodResult = Model [ ("v", "normal(0.0, 1.0)")
-                         , ("y", "normal_lpdf(y | 1.0 - normal_cdf(v, 0.0, 1.0), sigma)") ]
+-- likelihoodResult :: Model
+-- likelihoodResult = Model [ ("v", "normal(0.0, 1.0)")
+                         -- , ("y", "normal_lpdf(y | 1.0 - normal_cdf(v, 0.0, 1.0), sigma)") ]
 
 -- >>> ty tauAdj $ push "QUD"
 -- λx.λs.[⟨⋄, push_QUD(x)(s)⟩] : (γ → δ → t) → β → P (⋄ × Q δ γ β)

@@ -43,14 +43,13 @@ pattern SCon x = Con (Left x)
 pattern DCon :: Double -> Term
 pattern DCon x = Con (Right x)
 
-pattern Fa, GetPP, One, Zero, Tr, Undefined, Uniform :: Term
+pattern Fa, GetPP, One, Zero, Tr, Undefined :: Term
 pattern Fa        = SCon "F"
 pattern GetPP     = Lam "s" (Return (Var "s" `Pair` Var "s"))
 pattern One       = DCon 1
 pattern Zero      = DCon 0
 pattern Tr        = SCon "T"
 pattern Undefined = SCon "#"
-pattern Uniform   = SCon "Uniform"
 
 pattern Bern, CG, Factor, Indi, Neg, Height, DTall, Pr, Epi, SocPla, Observe :: Term -> Term
 pattern Bern p    = SCon "Bernoulli" `App` p
@@ -71,7 +70,7 @@ pattern Pr t      = SCon "Pr" `App` t
 pattern Prop1 i   = SCon "prop1" `App` i
 pattern PopQUD s  = Pop "QUD" s
 
-pattern Add, And, Eq, GE, Mult, Normal, Or, UpdEpi, UpdCG, UpdHeight, UpdDTall, UpdSocPla, UpdProp1, PushQUD :: Term -> Term -> Term
+pattern Add, And, Eq, GE, Mult, Normal, Or, Uniform, UpdEpi, UpdCG, UpdHeight, UpdDTall, UpdSocPla, UpdProp1, PushQUD :: Term -> Term -> Term
 pattern Add x y         = SCon "add" `App` (Pair x y)
 pattern And p q         = SCon "(∧)" `App` p `App` q
 pattern Or p q          = SCon "(∨)" `App` p `App` q
@@ -81,6 +80,7 @@ pattern Mult x y        = SCon "mult" `App` (Pair x y)
 pattern Beta x y        = SCon "Beta" `App` (Pair x y)
 pattern Normal x y      = SCon "Normal" `App` (Pair x y)
 pattern LogitNormal x y = SCon "Logit_normal" `App` (Pair x y)
+pattern Uniform x y     = SCon "Uniform" `App` (Pair x y)
 pattern UpdEpi acc i    = SCon "upd_epi" `App` acc `App` i
 pattern UpdCG cg s      = SCon "upd_CG" `App` cg `App` s
 pattern UpdLing p i     = SCon "upd_ling" `App` p `App` i

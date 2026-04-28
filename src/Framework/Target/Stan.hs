@@ -17,6 +17,7 @@ import Analysis.Factivity.Factivity
 import Control.Monad.Writer
 import Control.Monad.State
 import Data.Char                      (toLower)
+import Data.List                      (nub)
 import Framework.Lambda
 import Framework.Grammar
 import Theory.Signature
@@ -59,8 +60,9 @@ data Block = Data
            | TransformedParameters
   deriving (Eq)
 
-indent :: String -> String
-indent s = "  " ++ s
+indent :: Int -> String -> String
+indent 0 s = s
+indent n s = "  " ++ indent (n - 1) s
 
 distrType :: Distr -> String
 distrType = \case
@@ -70,27 +72,42 @@ distrType = \case
   ("normal"     , _) -> "real"
   ("uniform"    , _) -> "real"
 
+functionDefs :: String -> String
+functionDefs = \case
+  "truncated_normal" -> "\n" ++ indent 1 "real truncated_normal_lpdf" ++
+                        "(real x, real mu, real sigma, real a, real b) {\n" ++
+                        indent 2 "return normal_lpdf(x | mu, sigma) -\n" ++
+                        indent 3 "log_diff_exp(normal_lcdf(b | mu, sigma),\n" ++
+                        indent 4 "normal_lcdf(a | mu, sigma));\n" ++
+                        indent 1 "}\n"
+  _                  -> ""
+
+renderFunctions :: StanModel -> String
+renderFunctions (StanModel ps (_, (dLik, _))) = concatMap functionDefs distrs
+  where distrs :: [String]
+        distrs = nub $ dLik : map (\(_, _, (d, _)) -> d) ps
+
 renderParams :: StanModel -> String
 renderParams = \case
   StanModel [] _ -> ""
   StanModel ((vn, Just (l, u), d) : ps) lik
-    -> indent (distrType d) ++ "<lower=" ++ show l ++ ", upper=" ++ show u ++
+    -> indent 1 (distrType d) ++ "<lower=" ++ show l ++ ", upper=" ++ show u ++
        "> " ++ vn ++ ";\n" ++ renderParams (StanModel ps lik)
   StanModel ((vn, _          , d) : ps) lik
-    -> indent (distrType d) ++ " " ++ vn ++ ";\n" ++
+    -> indent 1 (distrType d) ++ " " ++ vn ++ ";\n" ++
        renderParams (StanModel ps lik)
 
 renderModel :: StanModel -> String
-renderModel m = indent "// PRIORS\n\n" ++ renderPriors (params m) ++ "\n\n" ++
-                indent "// LIKELIHOOD\n\n" ++ renderLikelihood (likelihood m)
+renderModel m = indent 1 "// PRIORS\n\n" ++ renderPriors (params m) ++ "\n\n" ++
+                indent 1 "// LIKELIHOOD\n\n" ++ renderLikelihood (likelihood m)
   where renderPriors :: Params -> String
         renderPriors = \case
           [] -> ""
           (vn, _, (name, args)) : ps
-            -> indent vn ++ " ∼ " ++ name ++ "(" ++ renderArgs args ++ ");\n" ++
-               renderPriors ps
+            -> indent 1 vn ++ " ∼ " ++ name ++ "(" ++ renderArgs args ++
+               ");\n" ++ renderPriors ps
         renderLikelihood :: Likelihood -> String
-        renderLikelihood (vn, (name, args)) = indent vn ++ " ∼ " ++ name ++
+        renderLikelihood (vn, (name, args)) = indent 1 vn ++ " ∼ " ++ name ++
                                               "(" ++ renderArgs args ++ ");\n"
         renderArgs :: [String] -> String
         renderArgs []             = ""
@@ -99,6 +116,7 @@ renderModel m = indent "// PRIORS\n\n" ++ renderPriors (params m) ++ "\n\n" ++
 
 render :: Block -> StanModel -> String
 render = \case
+  Functions  -> wrapWith "functions"  . renderFunctions
   Model      -> wrapWith "model"      . renderModel
   Parameters -> wrapWith "parameters" . renderParams
   where wrapWith block contents = block ++ " {\n" ++ contents ++ "}"
@@ -107,10 +125,11 @@ stan :: Typed -> IO ()
 stan t = do putStrLn "Checking type..."
             case typeOf t of
               Nothing -> putStrLn "Your model isn't well-typed!"
-              Just ty -> if   ty /= P r
-                         then putStrLn $ "The type of your model is" ++
+              Just ty -> if   ty == P r
+                         then putStrLn $ show ty ++ "!\nYour Stan model:\n\n" ++
+                              render Functions  m ++ "\n\n" ++
+                              render Parameters m ++ "\n\n" ++
+                              render Model      m
+                         else putStrLn $ "The type of your model is" ++
                               show ty ++ ", not P r!"
-                         else putStrLn $ show ty ++ "!\nYour Stan model:\n\n" ++
-                              render Parameters (makeStanModel t') ++ "\n\n" ++
-                              render Model (makeStanModel t')
-  where t' = termOf t
+  where m = makeStanModel (termOf t)

@@ -119,7 +119,7 @@ render = \case
   Functions  -> wrapWith "functions"  . renderFunctions
   Model      -> wrapWith "model"      . renderModel
   Parameters -> wrapWith "parameters" . renderParams
-  where wrapWith block contents = block ++ " {\n" ++ contents ++ "}"
+  where wrapWith blockName contents = blockName ++ " {\n" ++ contents ++ "}"
                   
 stan :: Typed -> IO ()
 stan t = do putStrLn "Checking type..."

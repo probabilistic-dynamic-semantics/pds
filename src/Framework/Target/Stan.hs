@@ -108,9 +108,9 @@ stan t = do putStrLn "Checking type..."
             case typeOf t of
               Nothing -> putStrLn "Your model isn't well-typed!"
               Just ty -> if   ty /= P r
-                then putStrLn $ "The type of your model is" ++ show ty ++
-                     ", not P r!"
-                else putStrLn $ show ty ++ "!\nYour Stan model:\n\n" ++
-                     render Parameters (makeStanModel t') ++ "\n\n" ++
-                     render Model (makeStanModel t')
+                         then putStrLn $ "The type of your model is" ++
+                              show ty ++ ", not P r!"
+                         else putStrLn $ show ty ++ "!\nYour Stan model:\n\n" ++
+                              render Parameters (makeStanModel t') ++ "\n\n" ++
+                              render Model (makeStanModel t')
   where t' = termOf t

@@ -51,24 +51,26 @@ pattern Zero      = DCon 0
 pattern Tr        = SCon "T"
 pattern Undefined = SCon "#"
 
-pattern Bern, CG, Factor, Indi, Neg, Height, DTall, Pr, Epi, SocPla, Observe :: Term -> Term
-pattern Bern p    = SCon "Bernoulli" `App` p
-pattern CG s      = SCon "CG" `App` s
-pattern Factor x  = SCon "factor" `App` x
-pattern Indi p    = SCon "𝟙" `App` p
-pattern Max pred  = SCon "max" `App` pred
-pattern Neg x     = SCon "neg" `App` x
-pattern Observe t = SCon "observe" `App` t
-pattern Epi i     = SCon "epi" `App` i
-pattern TauKnow s = SCon "tau_know" `App` s
-pattern Ling i    = SCon "ling" `App` i
-pattern Phil i    = SCon "phil" `App` i
-pattern Height i  = SCon "height" `App` i
-pattern DTall s   = SCon "d_tall" `App` s
-pattern SocPla i  = SCon "soc_pla" `App` i
-pattern Pr t      = SCon "Pr" `App` t
-pattern Prop1 i   = SCon "prop1" `App` i
-pattern PopQUD s  = Pop "QUD" s
+pattern Bern, CG, Factor, Indi, Neg, Height, DTall, Pr, Epi, SocPla, Observe, Mass, TrueMass :: Term -> Term
+pattern Bern p      = SCon "Bernoulli" `App` p
+pattern CG s        = SCon "CG" `App` s
+pattern Factor x    = SCon "factor" `App` x
+pattern Indi p      = SCon "𝟙" `App` p
+pattern Max pred    = SCon "max" `App` pred
+pattern Neg x       = SCon "neg" `App` x
+pattern Observe t   = SCon "observe" `App` t
+pattern Epi i       = SCon "epi" `App` i
+pattern TauKnow s   = SCon "tau_know" `App` s
+pattern Ling i      = SCon "ling" `App` i
+pattern Phil i      = SCon "phil" `App` i
+pattern Height i    = SCon "height" `App` i
+pattern DTall s     = SCon "d_tall" `App` s
+pattern SocPla i    = SCon "soc_pla" `App` i
+pattern Pr t        = SCon "Pr" `App` t
+pattern Prop1 i     = SCon "prop1" `App` i
+pattern PopQUD s    = Pop "QUD" s
+pattern Mass t      = SCon "Mass" `App` t
+pattern TrueMass t  = SCon "TrueMass" `App` t
 
 pattern Add, And, Eq, GE, Mult, Normal, Or, Uniform, UpdEpi, UpdCG, UpdHeight, UpdDTall, UpdSocPla, UpdProp1, PushQUD :: Term -> Term -> Term
 pattern Add x y         = SCon "add" `App` (Pair x y)
@@ -77,6 +79,7 @@ pattern Or p q          = SCon "(∨)" `App` p `App` q
 pattern Eq x y          = SCon "(=)" `App` (Pair x y)
 pattern GE a b          = SCon "(≥)" `App` a `App` b
 pattern Mult x y        = SCon "mult" `App` (Pair x y)
+pattern Div x y         = SCon "div" `App` (Pair x y)
 pattern Beta x y        = SCon "Beta" `App` (Pair x y)
 pattern Normal x y      = SCon "Normal" `App` (Pair x y)
 pattern LogitNormal x y = SCon "Logit_normal" `App` (Pair x y)
@@ -141,15 +144,15 @@ prop2 = sCon "prop2"
 
 getPP = lam s (Return (s & s))
 
-epi, cg, factor, normalL, max', purePP, putPP, pr :: Term -> Term
-assert φ       = φ >>>= lam p (getPP >>>= lam s ((purePP (cg s)) >>>= lam c (putPP (upd_CG (let' i c (observe (p @@ i) (Return i))) s))))
+epi, cg, normalL, max', purePP, putPP, pr :: Term -> Term
+normalize t    = factor (1 / Mass t) t
+assert φ       = φ >>>= lam p (getPP >>>= lam s ((purePP (cg s)) >>>= lam c (putPP (upd_CG (normalize (let' i c (observe (p @@ i) (Return i)))) s))))
 ask κ          = κ >>>= Lam "q" (getPP >>>= Lam "s" ((putPP (push_QUD (Var "q") (Var "s")))))
 epi i          = sCon "epi" @@ i
 cg s           = sCon "CG" @@ s
 upd_CG cg s    = sCon "upd_CG" @@ cg @@ s
 pop_qud s      = sCon "pop_QUD" @@ s
 push_QUD q s   = sCon "push_QUD" @@ q @@ s
-factor x       = sCon "factor" @@ x
 ling i         = sCon "ling" @@ i
 phil i         = sCon "phil" @@ i
 max' pred      = sCon "max" @@ pred
@@ -166,7 +169,7 @@ set  c = lam x (lam s (Return (TT & Upd c x s)))
 pop  c = lam s (Return (Pop c s))
 push c = lam x (lam s (Return (TT & Push c x s)))
 
-(>>>=), (<**>), (<$$>), lam, normal, observe:: Term -> Term -> Term
+(>>>=), (<**>), (<$$>), lam, normal, factor, observe:: Term -> Term -> Term
 t >>>= u    = lam fr (let' e (t @@ fr) (u @@ Pi1 e @@ Pi2 e))
   where fr:e:sh = map Var $ fresh [t, u]
 m >>> n     = m >>>= (lam fr n)
@@ -176,6 +179,7 @@ t <**> u    = t >>>= (lam fr (u >>>= (lam e (purePP (fr @@ e)))))
 t <$$> u    = purePP t Framework.Lambda.Convenience.<**> u
 lam (Var v) = Lam v
 normal x y  = sCon "Normal" @@ (x & y)
+factor x y  = Let "_" (sCon "factor" @@ x) y
 observe x y = Let "_" (sCon "observe" @@ x) y
 
 let', respond :: Term -> Term -> Term -> Term
@@ -188,7 +192,7 @@ respond f bg m = let' s bg m'
 instance Num Term where
   t * u           = case (t, u) of
                       (DCon x, DCon y) -> DCon (x * y)
-                      _                -> sCon "mult"  @@ (t & u)
+                      _                -> sCon "mult" @@ (t & u)
   t + u           = case (t, u) of
                       (DCon x, DCon y) -> DCon (x + y)
                       _                -> sCon "add" @@ (t & u)
@@ -196,6 +200,16 @@ instance Num Term where
   fromInteger x   = dCon (fromInteger x)
   signum (DCon x) = DCon (signum x)
   abs (DCon x)    = DCon (abs x)
+
+-- | 'Fractional' instance for 'Term'.
+instance Fractional Term where
+  t / u = case (t, u) of
+            (DCon x, DCon y) -> dCon (x / y)
+            _                -> sCon "div" @@ (t & u)
+  recip t = case t of
+              DCon x -> dCon (1 / x)
+              _      -> 1 / t
+  fromRational x = dCon (fromRational x)
 
 -- *** Generic functions
 

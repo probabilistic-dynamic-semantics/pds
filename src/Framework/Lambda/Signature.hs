@@ -42,6 +42,7 @@ tau0 = tauArithmetic  <||>
 tauArithmetic :: Sig
 tauArithmetic = \case
   Left "mult" -> Just (r :× r :→ r)
+  Left "div"  -> Just (r :× r :→ r)
   Left "add"  -> Just (r :× r :→ r)
   Left "max"  -> Just ((r :→ t) :→ r)
   Left "neg"  -> Just (r :→ r)
@@ -79,13 +80,15 @@ tauProbProg = \case
   Left "Logit_normal" -> Just (r :× r :→ P r)
   Left "Uniform"      -> Just (r :× r :→ P r)
   Left "disj"         -> Just (r :× P α :× P α :→ P α)
-  Left "observe"      -> Just (t :→ P Unit)
   Left "factor"       -> Just (r :→ P Unit)
+  Left "observe"      -> Just (t :→ P Unit)
   Left "Truncate"     -> Just (r :× r :→ P r :→ P r)
   Left "#"            -> Just (P α) -- The undefined distribution.
   Left "𝟙"            -> Just (t :→ r)
   Left "𝔼"            -> Just ((α :→ r) :→ P α :→ r)
   Left "Pr"           -> Just (P t :→ r)
+  Left "Mass"         -> Just (P t :→ r)
+  Left "TrueMass"     -> Just (P t :→ r)
   _                   -> Nothing
 
 -- | Real numbers.

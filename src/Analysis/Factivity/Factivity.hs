@@ -36,7 +36,8 @@ instance Interpretation Factivity SynSem where
     where lex = \case
             "knows"       -> [ SynSem {
                                  syn = stnc \\ np // stnc,
-                                 sem = ty tauFact (lam s (purePP (lam p (lam x (lam i (ITE (TauKnow s) (And (epi i @@ x @@ p) (p @@ i)) (epi i @@ x @@ p))))) @@ s))
+                                 -- sem = ty tauFact (lam s (purePP (lam p (lam x (lam i (ITE (TauKnow s) (And (epi i @@ x @@ p) (p @@ i)) (epi i @@ x @@ p))))) @@ s)),
+                                 sem = ty tauFact (lam s (purePP (lam p (lam x (lam i (ITE (TauKnow i) (And (epi i @@ x @@ p) (p @@ i)) (epi i @@ x @@ p))))) @@ s))
                                  } ]
             "linguist"    -> [ SynSem {
                                  syn = noun,
@@ -152,7 +153,7 @@ instance Interpretation Factivity SynSem where
 
 -- | Prior to be used for the factivity example.
 factivityPrior :: Term
-factivityPrior = let' x (LogitNormal 0 1) (let' y (LogitNormal 0 1) (let' z (LogitNormal 0 1) (let' b (Bern x) (Return (UpdCG (let' c (Bern y) (let' d (Bern z) (Return (UpdLing (lam x c) (UpdEpi (lam x (lam p d)) _0))))) (UpdTauKnow b ϵ))))))
+factivityPrior = let' x (LogitNormal 0 1) (let' y (LogitNormal 0 1) (let' z (LogitNormal 0 1) (Return (UpdCG (let' b (Bern x) (let' c (Bern y) (let' d (Bern z) (Return (UpdLing (lam x c) (UpdEpi (lam x (lam p d)) (UpdTauKnow b _0))))))) ϵ))))
 
 -- | Response function to be used for the factivity example.
 factivityRespond :: Term -> Term -> Term

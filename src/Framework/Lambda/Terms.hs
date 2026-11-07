@@ -84,6 +84,10 @@ instance Eq Term where
 instance Show Term where
   show = \case
     Var v             -> v
+    Con (Left "mult") `App` (t `Pair` u) -> "(" ++ show t ++ "*" ++ show u ++ ")"
+    Con (Left "div") `App` (t `Pair` u) -> "(" ++ show t ++ "/" ++ show u ++ ")"
+    Con (Left "add") `App` (t `Pair` (Con (Left "neg") `App` u)) -> "(" ++ show t ++ "-" ++ show u ++ ")"
+    Con (Left "add") `App` (t `Pair` u) -> "(" ++ show t ++ "+" ++ show u ++ ")"
     Con (Left s)      -> s
     Con (Right d)     -> show d
     Lam v t           -> "λ" ++ v ++ "." ++ show t

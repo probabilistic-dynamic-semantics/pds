@@ -31,6 +31,7 @@ library
                  , Framework.Lambda.Types
                  , Framework.Target
                  , Framework.Target.Stan
+                 , Framework.Target.Quivers
                  , Theory.Signature
   hs-source-dirs: src
   build-depends: base

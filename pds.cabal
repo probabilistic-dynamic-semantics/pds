@@ -26,6 +26,7 @@ library
                  , Framework.Lambda
                  , Framework.Lambda.Convenience
                  , Framework.Lambda.Delta
+                 , Framework.Lambda.Delta.Arithmetic
                  , Framework.Lambda.Signature
                  , Framework.Lambda.Terms
                  , Framework.Lambda.Types
@@ -35,7 +36,9 @@ library
   hs-source-dirs: src
   build-depends: base
                , containers
+               , hspray
                , mtl
+               , numeric-prelude
                , transformers
   default-language: Haskell2010
 
@@ -44,7 +47,9 @@ test-suite pds-test
   hs-source-dirs:      test
   main-is:             Spec.hs
   build-depends:       base
+                     , hspray
                      , mtl
+                     , numeric-prelude
                      , pds
                      , hspec >= 2.0
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N

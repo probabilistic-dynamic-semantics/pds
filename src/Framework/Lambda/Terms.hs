@@ -38,7 +38,7 @@ import Data.Char           (toLower)
 -- *** Definitions
 
 -- | Constants are indexed by either strings or real numbers.
-type Constant = Either String Double
+type Constant = Either String Rational
 
 -- | Variable names are represented by strings.
 type VarName = String
@@ -84,8 +84,12 @@ instance Eq Term where
 instance Show Term where
   show = \case
     Var v             -> v
+    Con (Left "mult") `App` (t `Pair` u) -> "(" ++ show t ++ " * " ++ show u ++ ")"
+    Con (Left "div") `App` (t `Pair` u) -> "(" ++ show t ++ " / " ++ show u ++ ")"
+    Con (Left "add") `App` (t `Pair` (Con (Left "neg") `App` u)) -> "(" ++ show t ++ " - " ++ show u ++ ")"
+    Con (Left "add") `App` (t `Pair` u) -> "(" ++ show t ++ " + " ++ show u ++ ")" 
     Con (Left s)      -> s
-    Con (Right d)     -> show d
+    Con (Right d)     -> show (fromRational d)
     Lam v t           -> "λ" ++ v ++ "." ++ show t
     App t@(Lam _ _) u -> "(" ++ show t ++ ")(" ++ show u ++ ")"
     App t u           -> show t ++ "(" ++ show u ++ ")"
@@ -107,8 +111,12 @@ sCon :: String -> Term
 sCon s = Con (Left s)
 
 -- | Turn a 'Double' into a constant.
-dCon :: Double -> Term
+dCon :: Rational -> Term
 dCon d = Con (Right d)
+
+-- >>> :t dCon 1
+-- dCon 1 :: Term
+
 
 -- | Abbreviations for application and pairing.
 (@@), (&) :: Term -> Term -> Term

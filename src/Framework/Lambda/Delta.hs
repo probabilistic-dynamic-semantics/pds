@@ -1,5 +1,8 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 {-|
 Module      : Theory.Delta
@@ -14,42 +17,23 @@ feature constants.
 
 module Framework.Lambda.Delta where
 
-import Data.List
-import Framework.Lambda.Convenience
-import Framework.Lambda.Terms
+import           Data.List
+import           Data.Ratio
+import           Framework.Lambda.Convenience
+import           Framework.Lambda.Delta.Arithmetic
+import           Framework.Lambda.Terms
 
 --------------------------------------------------------------------------------
 -- * Delta rules
 
 -- ** Example rules
 
--- | Performs some arithmetic simplifications.
-arithmetic :: DeltaRule
-arithmetic = \case
-  Add t u      -> case t of
-                    Zero -> Just u
-                    x@(DCon _) -> case u of
-                                    Zero       -> Just x
-                                    y@(DCon _) -> Just (x + y)
-                                    _          -> Nothing
-                    t'         -> case u of
-                                    Zero -> Just t'
-                                    _    -> Nothing
-  Mult t u     -> case t of
-                     Zero       -> Just Zero
-                     One        -> Just u
-                     x@(DCon _) -> case u of
-                                     Zero       -> Just Zero
-                                     One        -> Just x
-                                     y@(DCon _) -> Just (x * y)
-                     t'         -> case u of
-                                     Zero -> Just Zero
-                                     One  -> Just t'
-                                     _    -> Nothing
-  Neg (DCon x) -> Just (dCon (-x))
-  _            -> Nothing
+-- | Simplify arithmetic expressions.
+arithmetic :: forall simplifier . Arithmetic simplifier => DeltaRule
+arithmetic t = do x <- toSimplifier @simplifier t
+                  result <- fromSimplifier @simplifier t x
+                  if result == t then Nothing else Just result
 
--- | Get rid of vacuous let-bindings.
 cleanUp :: DeltaRule
 cleanUp = \case
   Let v m k | sampleOnly m && v `notElem` freeVars k -> Just k
@@ -66,15 +50,20 @@ disjunctions = \case
                                                      (Let v m k)
                                                      (Let v n k)
                                                     )
-  Disj x (Let v m k) (Let v' n k') | m == n -> Just (Let v m (
+  Disj x (Let v m k) (Let v' n k') | m == n -> Just (Let v'' m (
                                                         Disj x
-                                                          k
-                                                          (subst v' (Var v) k')
+                                                          (subst v (Var v'') k)
+                                                          (subst v' (Var v'') k')
                                                         )
                                                     )
-  Disj _ m            n            | m == n -> Just m
-  Disj _ m            Undefined             -> Just m
-  Disj _ Undefined    n                     -> Just n
+    where v'':_ = fresh [x, k, k']
+  Disj x (Let v (Factor y) t) u             -> Just (factor z (Disj ((x * y) / z) (subst v TT t) u))
+    where z = x * y + (1 - x)
+  Disj x t (Let v (Factor y) u)             -> Just (factor z (Disj (x / z) t (subst v TT u)))
+    where z = x + (1 - x) * y
+  Disj x m            n            | m == n -> Just m
+  Disj x m            Undefined             -> Just (factor x m)
+  Disj x Undefined    n                     -> Just (factor (1 - x) n)
   _                                         -> Nothing
 
 -- | Computes syntactic equalities.
@@ -112,27 +101,40 @@ logical = \case
 -- | Computes the /max/ function.
 maxes :: DeltaRule
 maxes = \case
-   Max (Lam y (GE x (Var y'))) | y' == y -> Just x
-   _                                     -> Nothing          
+   Max (Lam y (GE x (Var y'))) | y' == y
+                               , y `notElem` freeVars x -> Just x
+   _                                                    -> Nothing          
 
 -- | Observing @Tr@ is trivial, while observing @Fa@ yields an undefined
 -- probability distribution.
 observations :: DeltaRule
 observations = \case
-  Let _ (Observe Tr) k -> Just k
+  Let v (Observe Tr) k -> Just (subst v TT k)
   Let _ (Observe Fa) _ -> Just Undefined
   _                    -> Nothing
 
--- | Computes probabilities for certain probabilitic programs.
+-- | Computes probabilities.
 probabilities :: DeltaRule
 probabilities = \case
-  Pr (Return Tr)                                             -> Just 1
-  Pr (Return Fa)                                             -> Just 0
-  Pr (Bern x)                                                -> Just x
-  Pr (Disj x t u)                                            -> Just (x * Pr t + (1 - x) * Pr u)
-  Pr (Let v (Normal x y) (Return (GE t (Var v')))) | v' == v -> Just (NormalCDF x y t)
-  Pr (Let v (Normal x y) (Return (GE (Var v') t))) | v' == v -> Just (1 - NormalCDF x y t)
-  _                                                          -> Nothing
+  Pr t -> Just (TrueMass t / Mass t)
+  _    -> Nothing
+
+-- | Compute masses.
+masses :: DeltaRule
+masses = \case
+  Mass (Return _)               -> Just 1
+  Mass (Let v (Factor (Div (DCon 1) (Mass t))) t')
+    | t' == t
+    , v `notElem` freeVars t'   -> Just 1
+  Mass (Let v (Factor x) t)     -> Just (x * Mass (subst v TT t))
+  Mass (Disj x t u)             -> Just (x * Mass t + (1 - x) * Mass u)
+  Mass Undefined                -> Just 0
+  TrueMass (Return Tr)          -> Just 1
+  TrueMass (Return Fa)          -> Just 0
+  TrueMass (Let v (Factor x) t) -> Just (x * TrueMass (subst v TT t))
+  TrueMass (Disj x t u)         -> Just (x * TrueMass t + (1 - x) * TrueMass u)
+  TrueMass Undefined            -> Just 0
+  _                             -> Nothing
 
 -- | Computes functions on indices and states. These include reading and writing
 -- to locations of fixed type, as well as pushing to and popping from stacks,
@@ -142,8 +144,8 @@ states = \case
   LkUp c (Upd  c' v _)   | c' == c    -> Just v
   LkUp c (Upd  c' _ s)   | c' /= c    -> Just (LkUp c s)
   Upd  c v (Upd  c' _ s) | c' == c    -> Just (Upd c v s)
-  Upd  c (LkUp c' s ) s' | c' == c &&
-                           s' == s    -> Just s
+  Upd  c (LkUp c' s ) s' | c' == c
+                         , s' == s    -> Just s
   Pop  c (Push c' v s)   | c' == c    -> Just (v & s)
   Pop  c (Push c' v s)   | c' /= c    -> Just (v' & s')
     where v', s' :: Term
@@ -155,3 +157,9 @@ states = \case
           v' = Pi1 (Pop c s)
           s' = Upd c' v (Pi2 (Pop c s))
   _                                   -> Nothing
+
+factors :: DeltaRule
+factors = \case
+  Let v (Factor x) (Let v' (Factor y) t) -> Just (Let v (Factor (x * subst v TT y)) (subst v' TT t))
+  Let v (Factor One) t                   -> Just (subst v TT t)
+  _                                      -> Nothing

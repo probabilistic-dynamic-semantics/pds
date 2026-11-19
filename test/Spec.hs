@@ -16,6 +16,7 @@ import Control.Monad.Writer
 import Framework.Lambda
 import Framework.Grammar
 import Framework.Target
+import Math.Algebra.Hspray (RatioOfSprays)
 -- import Test.Hspec
 
 main :: IO ()
@@ -39,7 +40,7 @@ getSemantics n = sem . (indices !! n) . getList . flip (interpretations @p) 0
 
 -- stanOutput pp   = Stan (fst (runWriter (toStanParams (termOf pp)))) (fst (runWriter (toStanModel (termOf pp))))
 
-deltaRules = probabilities <||> arithmetic <||> states <||> disjunctions <||> cleanUp <||> maxes <||> logical <||> ite <||> observations <||> factors <||> masses
+deltaRules = probabilities <||> arithmetic @(RatioOfSprays Rational) <||> states <||> disjunctions <||> cleanUp <||> maxes <||> logical <||> ite <||> observations <||> factors <||> masses
   
 s1         = termOf $ getSemantics @Factivity 1 ["jo", "knows", "that", "bo", "is", "a", "linguist"] 
 q1         = termOf $ getSemantics @Factivity 1 ["how", "likely", "that", "bo", "is", "a", "linguist"]

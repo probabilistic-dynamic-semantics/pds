@@ -1,5 +1,5 @@
 :set -isrc -XDataKinds -XTypeApplications
-:load Analysis.Adjectives.Adjectives Analysis.Adjectives.Signature Analysis.Factivity.Factivity Analysis.Factivity.Signature Framework.Grammar Framework.Grammar.Convenience Framework.Grammar.CCG Framework.Grammar.Lexica.SynSem Framework.Grammar.Parser Framework.Lambda Framework.Lambda.Convenience Framework.Lambda.Delta Framework.Lambda.Terms Framework.Lambda.Types Framework.Target Framework.Target.Stan Framework.Target.Quivers Theory.Signature
+:load Analysis.Adjectives.Adjectives Analysis.Adjectives.Signature Analysis.Factivity.Factivity Analysis.Factivity.Signature Framework.Grammar Framework.Grammar.Convenience Framework.Grammar.CCG Framework.Grammar.Lexica.SynSem Framework.Grammar.Parser Framework.Lambda Framework.Lambda.Convenience Framework.Lambda.Delta Framework.Lambda.Delta.Arithmetic Framework.Lambda.Terms Framework.Lambda.Types Framework.Target Framework.Target.Stan Framework.Target.Quivers Theory.Signature
 
 
 import Analysis.Adjectives.Adjectives
@@ -14,6 +14,7 @@ import Framework.Grammar.Parser
 import Framework.Lambda
 import Framework.Lambda.Convenience
 import Framework.Lambda.Delta
+import Framework.Lambda.Delta.Arithmetic
 import Framework.Lambda.Terms
 import Framework.Lambda.Types
 import Framework.Target

@@ -24,7 +24,7 @@ import Theory.Signature
 
 type Distr      = (String, [String])
 type VarName    = String
-type Bounds     = (Double, Double)
+type Bounds     = (Rational, Rational)
 type Params     = [(VarName, Maybe Bounds, Distr)]
 type Likelihood = (VarName, Distr)
 

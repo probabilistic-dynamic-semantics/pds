@@ -36,6 +36,7 @@ main = pure ()
 getSemantics :: forall (p :: Project). Interpretation p SynSem => Int -> [String] -> Typed
 getSemantics n = sem . (indices !! n) . getList . flip (interpretations @p) 0
   where indices = head : map (\f -> f . tail) indices
+
 -- stanOutput pp   = Stan (fst (runWriter (toStanParams (termOf pp)))) (fst (runWriter (toStanModel (termOf pp))))
 
 deltaRules = probabilities <||> arithmetic <||> states <||> disjunctions <||> cleanUp <||> maxes <||> logical <||> ite <||> observations <||> factors <||> masses
@@ -152,6 +153,6 @@ lingSig = \case
   Left "ling" -> Just (e :→ t)
   _           -> Nothing
 
--- >>> ty lingSig (lam x (x @@ ling1))
--- λx.x(ling) : ((e → t) → β) → β
+-- >>> factivityExample
+-- (v ∼ Logit_normal(⟨0.0, 1.0⟩); (w ∼ Logit_normal(⟨0.0, 1.0⟩); (y ∼ Uniform(⟨0.0, 1.0⟩); Truncate(⟨0.0, 1.0⟩)(Normal(⟨(w / (1.0 + ((-1.0 * v) + (v * w)))), y⟩))))) : P r
 

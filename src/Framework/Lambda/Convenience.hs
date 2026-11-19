@@ -40,7 +40,7 @@ popQ i q a = TyCon "popQ" [i, q, a]
 pattern SCon :: String -> Term
 pattern SCon x = Con (Left x)
 
-pattern DCon :: Double -> Term
+pattern DCon :: Rational -> Term
 pattern DCon x = Con (Right x)
 
 pattern Fa, GetPP, One, Zero, Tr, Undefined :: Term
@@ -209,7 +209,7 @@ instance Fractional Term where
   recip t = case t of
               DCon x -> dCon (1 / x)
               _      -> 1 / t
-  fromRational x = dCon (fromRational x)
+  fromRational = dCon
 
 -- *** Generic functions
 

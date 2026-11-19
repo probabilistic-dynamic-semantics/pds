@@ -24,7 +24,7 @@ import Theory.Signature
 
 type Distr      = (String, [String])
 type VarName    = String
-type Bounds     = (Double, Double)
+type Bounds     = (Rational, Rational)
 type Params     = [(VarName, Maybe Bounds, Distr)]
 type Likelihood = (VarName, Distr)
 
@@ -45,6 +45,7 @@ makeLikelihood :: Term -> Likelihood
 makeLikelihood = \case
   Let _ _ t -> makeLikelihood t
   (Normal m s) -> ("y", ("normal", [show m, show s]))
+  (LogitNormal m s) -> ("y", ("logit_normal", [show m, show s]))
 
 makeStanModel :: Term -> StanModel
 makeStanModel t = StanModel { params = makeParams t
@@ -69,6 +70,7 @@ distrType = \case
   ("bernoulli"  , _) -> "int"
   ("exponential", _) -> "real"
   ("logistic"   , _) -> "real"
+  ("logit_normal", _) -> "real"
   ("normal"     , _) -> "real"
   ("uniform"    , _) -> "real"
 
@@ -116,7 +118,7 @@ renderModel m = indent 1 "// PRIORS\n\n" ++ renderPriors (params m) ++ "\n\n" ++
 
 render :: Block -> StanModel -> String
 render = \case
-  Functions  -> wrapWith "functions"  . renderFunctions
+  -- Functions  -> wrapWith "functions"  . renderFunctions
   Model      -> wrapWith "model"      . renderModel
   Parameters -> wrapWith "parameters" . renderParams
   where wrapWith blockName contents = blockName ++ " {\n" ++ contents ++ "}"
@@ -127,7 +129,7 @@ stan t = do putStrLn "Checking type..."
               Nothing -> putStrLn "Your model isn't well-typed!"
               Just ty -> if   ty == P r
                          then putStrLn $ show ty ++ "!\nYour Stan model:\n\n" ++
-                              render Functions  m ++ "\n\n" ++
+                              -- render Functions  m ++ "\n\n" ++
                               render Parameters m ++ "\n\n" ++
                               render Model      m
                          else putStrLn $ "The type of your model is" ++

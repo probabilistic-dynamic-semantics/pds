@@ -72,7 +72,7 @@ pattern PopQUD s    = Pop "QUD" s
 pattern Mass t      = SCon "Mass" `App` t
 pattern TrueMass t  = SCon "TrueMass" `App` t
 
-pattern Add, And, Eq, GE, Mult, Normal, Or, Uniform, UpdEpi, UpdCG, UpdHeight, UpdDTall, UpdSocPla, UpdProp1, PushQUD :: Term -> Term -> Term
+pattern Add, And, Eq, GE, Mult, Normal, Or, Uniform, UpdEpi, UpdCG, UpdHeight, UpdDTall, UpdSocPla, UpdProp1, PushQUD, Integrate :: Term -> Term -> Term
 pattern Add x y         = SCon "add" `App` (Pair x y)
 pattern And p q         = SCon "(∧)" `App` p `App` q
 pattern Or p q          = SCon "(∨)" `App` p `App` q
@@ -93,6 +93,7 @@ pattern UpdDTall d s    = SCon "upd_d_tall" `App` d `App` s
 pattern UpdSocPla p i   = SCon "upd_soc_pla" `App` p `App` i
 pattern UpdProp1 b i    = SCon "upd_prop1" `App` b `App` i
 pattern PushQUD q s     = SCon "push_QUD" `App` q ` App` s
+pattern Integrate t u   = SCon "Integrate" `App` (t `Pair` u)
 
 pattern Disj, ITE, Truncate :: Term -> Term -> Term -> Term
 pattern Disj x m n      = SCon "disj" `App` (Pair (Pair x m) n)
@@ -244,8 +245,14 @@ sampleOnly = \case
   Normal _ _      -> True
   LogitNormal _ _ -> True
   Truncate _ _ _  -> True
+  Uniform _ _     -> True
   _               -> False
 
+mean :: Term -> Term
+mean = \case
+  Normal x _      -> x
+  LogitNormal 0 1 -> DCon 0.5
+  Uniform x y     -> (y - x) / 2
 
 -- | Combining signatures and rules
 (<||>) :: Alternative m => (a -> m b) -> (a -> m b) -> a -> m b

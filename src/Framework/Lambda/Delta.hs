@@ -122,19 +122,33 @@ probabilities = \case
 -- | Compute masses.
 masses :: DeltaRule
 masses = \case
-  Mass (Return _)               -> Just 1
+  Mass (Return _)                 -> Just 1
   Mass (Let v (Factor (Div (DCon 1) (Mass t))) t')
     | t' == t
-    , v `notElem` freeVars t'   -> Just 1
-  Mass (Let v (Factor x) t)     -> Just (x * Mass (subst v TT t))
-  Mass (Disj x t u)             -> Just (x * Mass t + (1 - x) * Mass u)
-  Mass Undefined                -> Just 0
-  TrueMass (Return Tr)          -> Just 1
-  TrueMass (Return Fa)          -> Just 0
-  TrueMass (Let v (Factor x) t) -> Just (x * TrueMass (subst v TT t))
-  TrueMass (Disj x t u)         -> Just (x * TrueMass t + (1 - x) * TrueMass u)
-  TrueMass Undefined            -> Just 0
-  _                             -> Nothing
+    , v `notElem` freeVars t'     -> Just 1
+  Mass (Let v t u) | sampleOnly t -> Just (Integrate t (Lam v (Mass u)))
+  Mass t           | sampleOnly t -> Just 1
+  Mass (Let v (Factor x) t)       -> Just (x * Mass (subst v TT t))
+  Mass (Disj x t u)               -> Just (x * Mass t + (1 - x) * Mass u)
+  Mass Undefined                  -> Just 0
+  TrueMass (Return Tr)            -> Just 1
+  TrueMass (Return Fa)            -> Just 0
+  TrueMass (Let v (Factor x) t)   -> Just (x * TrueMass (subst v TT t))
+  TrueMass (Disj x t u)           -> Just (x * TrueMass t + (1 - x) * TrueMass u)
+  TrueMass (Let v (Normal x y) (Return (GE (Var v') t)))
+    | v' == v                     -> Just (NormalCDF x y t)
+  TrueMass Undefined              -> Just 0
+  _                               -> Nothing
+
+-- | Compute integrals.
+integration :: DeltaRule
+integration = \case
+  Integrate t (Lam _ x@(DCon _)) | sampleOnly t   -> Just x
+  Integrate t (Lam v (Var v')) | v' == v -> case t of
+                                              LogitNormal 0 1 -> Just (DCon 0.5)
+                                              Normal x _      -> Just x
+                                              _               -> Nothing
+  _                                      -> Nothing
 
 -- | Computes functions on indices and states. These include reading and writing
 -- to locations of fixed type, as well as pushing to and popping from stacks,
@@ -161,5 +175,9 @@ states = \case
 factors :: DeltaRule
 factors = \case
   Let v (Factor x) (Let v' (Factor y) t) -> Just (Let v (Factor (x * subst v TT y)) (subst v' TT t))
+  Let v t (Let v' (Factor x) u)
+    | v `notElem` freeVars x             -> Just (Let v' (Factor x) (Let v t u))
   Let v (Factor One) t                   -> Just (subst v TT t)
+  Let v t (Let v' (Factor (Var v'')) u)
+    | v'' == v && v `notElem` freeVars u -> Just (Let v' (Factor (mean t)) u)
   _                                      -> Nothing

@@ -40,13 +40,13 @@ getSemantics n = sem . (indices !! n) . getList . flip (interpretations @p) 0
 
 -- stanOutput pp   = Stan (fst (runWriter (toStanParams (termOf pp)))) (fst (runWriter (toStanModel (termOf pp))))
 
-deltaRules = probabilities <||> arithmetic @(RatioOfSprays Rational) <||> states <||> disjunctions <||> cleanUp <||> maxes <||> logical <||> ite <||> observations <||> factors <||> masses
+deltaRules = probabilities <||> arithmetic @(RatioOfSprays Rational) <||> states <||> disjunctions <||> cleanUp <||> maxes <||> logical <||> ite <||> observations <||> factors <||> masses <||> integration
   
 s1         = termOf $ getSemantics @Factivity 1 ["jo", "knows", "that", "bo", "is", "a", "linguist"] 
 q1         = termOf $ getSemantics @Factivity 1 ["how", "likely", "that", "bo", "is", "a", "linguist"]
 discourse  = ty tauFact $ assert s1 >>> ask q1
 
-factivityExample = asTyped tauFact (betaDeltaNormal deltaRules . factivityRespond factivityPrior) discourse
+factivityExample = asTyped tauFact (betaDeltaNormal deltaRules . normalize . factivityRespond factivityPrior) discourse
 
 -- factivityResult :: Model
 -- factivityResult = Model [ ("v", "logit_normal(0.0, 1.0)")
@@ -66,7 +66,7 @@ scaleNormingExample = asTyped tauAdj (betaDeltaNormal deltaRules . adjectivesRes
 q1''        = termOf $ getSemantics @Adjectives 0 ["how", "likely", "that", "jo", "is", "tall"]
 discourse'' = ty tauAdj $ assert s1' >>> ask q1''
 
-likelihoodExample = asTyped tauAdj (betaDeltaNormal deltaRules . adjectivesRespond likelihoodPrior) discourse''
+likelihoodExample = asTyped tauAdj (betaDeltaNormal deltaRules . normalize . adjectivesRespond likelihoodPrior) discourse''
 
 -- likelihoodResult :: Model
 -- likelihoodResult = Model [ ("v", "normal(0.0, 1.0)")
@@ -154,6 +154,6 @@ lingSig = \case
   Left "ling" -> Just (e :→ t)
   _           -> Nothing
 
--- >>> factivityExample
--- (v ∼ Logit_normal(⟨0.0, 1.0⟩); (w ∼ Logit_normal(⟨0.0, 1.0⟩); (y ∼ Uniform(⟨0.0, 1.0⟩); Truncate(⟨0.0, 1.0⟩)(Normal(⟨(w / (1.0 + ((-1.0 * v) + (v * w)))), y⟩))))) : P r
+-- >>> likelihoodExample
+-- (u ∼ Normal(⟨0.0, 1.0⟩); (v ∼ Uniform(⟨0.0, 1.0⟩); Normal(⟨((2.0 * (0.5 * Normal_cdf(⟨0.0, 1.0⟩)(u))) / 1.0), v⟩))) : P r
 

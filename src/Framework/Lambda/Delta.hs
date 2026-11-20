@@ -17,11 +17,11 @@ feature constants.
 
 module Framework.Lambda.Delta where
 
-import           Data.List
-import           Data.Ratio
-import           Framework.Lambda.Convenience
-import           Framework.Lambda.Delta.Arithmetic
-import           Framework.Lambda.Terms
+import Data.List
+import Data.Ratio
+import Framework.Lambda.Convenience
+import Framework.Lambda.Delta.Arithmetic
+import Framework.Lambda.Terms
 
 --------------------------------------------------------------------------------
 -- * Delta rules

@@ -17,6 +17,7 @@ feature constants.
 
 module Framework.Lambda.Delta where
 
+import Control.Monad (guard)
 import Data.List
 import Data.Ratio
 import Framework.Lambda.Convenience
@@ -32,7 +33,8 @@ import Framework.Lambda.Terms
 arithmetic :: forall simplifier . Arithmetic simplifier => DeltaRule
 arithmetic t = do x <- toSimplifier @simplifier t
                   result <- fromSimplifier @simplifier t x
-                  if result == t then Nothing else Just result
+                  guard (result /= t)
+                  pure result
 
 cleanUp :: DeltaRule
 cleanUp = \case
@@ -78,6 +80,16 @@ indicator = \case
   Indi Tr -> Just 1
   Indi Fa -> Just 0
   _       -> Nothing
+
+-- | Compute integrals.
+integration :: DeltaRule
+integration = \case
+  Integrate t (Lam _ x@(DCon _)) | sampleOnly t -> Just x
+  Integrate t (Lam v (Var v'))   | v' == v      -> case t of
+                                                     LogitNormal 0 1 -> Just (DCon 0.5)
+                                                     Normal x _      -> Just x
+                                                     _               -> Nothing
+  _                                             -> Nothing
 
 -- | Computes /if then else/.
 ite :: DeltaRule
@@ -135,20 +147,19 @@ masses = \case
   TrueMass (Return Fa)            -> Just 0
   TrueMass (Let v (Factor x) t)   -> Just (x * TrueMass (subst v TT t))
   TrueMass (Disj x t u)           -> Just (x * TrueMass t + (1 - x) * TrueMass u)
-  TrueMass (Let v (Normal x y) (Return (GE (Var v') t)))
-    | v' == v                     -> Just (NormalCDF x y t)
+  TrueMass (
+    Let v (Normal x y) (
+        Return (t `GE` Var v')
+        )
+    ) | v' == v                   -> Just (NormalCDF x y t)
+  TrueMass (
+    Let v (Normal x y) (
+        Return (Var v' `GE` t)
+        )
+    ) | v' == v                   -> Just (NormalCCDF x y t)
+
   TrueMass Undefined              -> Just 0
   _                               -> Nothing
-
--- | Compute integrals.
-integration :: DeltaRule
-integration = \case
-  Integrate t (Lam _ x@(DCon _)) | sampleOnly t   -> Just x
-  Integrate t (Lam v (Var v')) | v' == v -> case t of
-                                              LogitNormal 0 1 -> Just (DCon 0.5)
-                                              Normal x _      -> Just x
-                                              _               -> Nothing
-  _                                      -> Nothing
 
 -- | Computes functions on indices and states. These include reading and writing
 -- to locations of fixed type, as well as pushing to and popping from stacks,

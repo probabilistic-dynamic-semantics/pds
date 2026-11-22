@@ -154,6 +154,14 @@ lingSig = \case
   Left "ling" -> Just (e :→ t)
   _           -> Nothing
 
--- >>> likelihoodExample
--- (u ∼ Normal(⟨0.0, 1.0⟩); (v ∼ Uniform(⟨0.0, 1.0⟩); Normal(⟨((2.0 * (0.5 * Normal_cdf(⟨0.0, 1.0⟩)(u))) / 1.0), v⟩))) : P r
+-- >>> factivityExample
+-- (u ∼ Logit_normal(⟨0.0, 1.0⟩); (v ∼ Logit_normal(⟨0.0, 1.0⟩); (w ∼ Uniform(⟨0.0, 1.0⟩); Truncate(⟨0.0, 1.0⟩)(Normal(⟨(v / (1.0 + ((-1.0 * u) + (u * v)))), w⟩))))) : P r
 
+-- >>> ty tau0 ((Lam "v" (Var "v")) @@ Var "v")
+-- (λv.v)(v) : β
+
+-- >>> betaDeltaNormalTyped tauFact deltaRules (ty tauFact ((Lam "v" (Var "v")) @@ (Var "w")))
+-- Right w : α
+
+-- >>> betaDeltaNormalTyped tauFact deltaRules (ty tau0 $ (Lam "v" (Var "v")) @@ Var "v")
+-- Right v : α

@@ -13,6 +13,7 @@ top level for some limited polymorphism. Constants may also be polymorphic.
 
 module Framework.Lambda.Types ( arity
                               , asTyped
+                              , betaDeltaNormalTyped
                               , order
                               , Sig
                               , ty
@@ -23,6 +24,7 @@ module Framework.Lambda.Types ( arity
                               , unify
                               ) where
 
+import Control.Monad ((<=<))
 import Control.Monad.State    (evalStateT, get, lift, put, StateT)
 import Data.Char              (toLower)
 import Data.List              (nub)
@@ -41,6 +43,7 @@ data Type = Atom String
           | Type :→ Type
           | Unit
           | Type :× Type
+          | M Type
           | P Type
           | TyCon String [Type]
           | TyVar String
@@ -114,6 +117,7 @@ instance Show Type where
     a@(_ :→ _) :× b          -> "((" ++ show a ++ ") × " ++ show b ++ ")"
     a :× b@(_ :→ _)          -> "(" ++ show a ++ " × (" ++ show b ++ "))"
     a :× b                   -> show a ++ " × " ++ show b
+    M a                      -> "M" ++ wrap a
     P a                      -> "P" ++ wrap a
     TyCon f tys              -> f ++ concatMap wrap tys
     TyVar s                  -> s
@@ -132,6 +136,7 @@ arity (a :→ b)      = arity b + 1
 arity _             = 0
 order (a :→ b)      = max (order a + 1) (order b)
 order (a :× b)      = max (order a) (order b)
+order (M a)         = order a
 order (P a)         = order a
 order (TyCon _ tys) = maximum (map order tys)
 order _             = 0
@@ -155,6 +160,7 @@ getVars = nub . getVars'
         getVars' (TyVar v)     = [v]
         getVars' (a :→ b)      = getVars' a ++ getVars' b
         getVars' (a :× b)      = getVars' a ++ getVars' b
+        getVars' (M a)         = getVars' a
         getVars' (P a)         = getVars' a
         getVars' (TyCon _ tys) = concatMap getVars' tys
         getVars' _             = []
@@ -187,6 +193,8 @@ unify cs = do
       (Unit, _)                        -> Nothing -- No mismatches allowed.
       (x :× y, z :× w)                 -> Just (u1 ++ [(x, z), (y, w)], u2) -- Break apart products
       (_ :× _, _)                      -> Nothing -- No mismatches allowed.
+      (M x, M y)                       -> Just (u1 ++ [(x, y)], u2) -- Break apart @M@.
+      (M _, _)                         -> Nothing -- No mismatches allowed.
       (P x, P y)                       -> Just (u1 ++ [(x, y)], u2) -- Break apart @P@.
       (P _, _)                         -> Nothing -- No mismatches allowed.
       (TyCon f tys1
@@ -204,6 +212,7 @@ unify cs = do
     substType x y z             | z == x = y
     substType x y (z1 :→ z2)             = substType x y z1 :→ substType x y z2
     substType x y (z1 :× z2)             = substType x y z1 :× substType x y z2
+    substType x y (M z)                  = M (substType x y z)
     substType x y (P z)                  = P (substType x y z)
     substType x y (TyCon f tys)          = TyCon f (map (substType x y) tys)
     substType _ _ z                      = z
@@ -213,6 +222,7 @@ unify cs = do
     occurs x = \case -- List out possible @y@s.
       y :→ z      -> occurs x y || occurs x z
       y :× z      -> occurs x y || occurs x z
+      M y         -> occurs x y
       P y         -> occurs x y
       TyCon _ tys -> or (map (occurs x) tys)
       y           -> x == y -- The "otherwise" case; fly, @At@, @Unit@, and @TyVar@.
@@ -328,8 +338,25 @@ computeType tau t = do ty <- collectConstraints tau t
             put (types, i, cs')
             tType <- collectConstraints tau t
             (ty':pes', j, cs'') <- get
-            put (pes', j, cs'' ++ [(tType, P newTy), (uType, P (TyVar ty'))])
-            pure uType
+            subst <- lift (unify cs'')
+            let tType' = applySubst subst tType
+                uType' = applySubst subst uType
+            put (pes', j, cs'' ++ [ checkType tType' newTy
+                                  , checkType uType' (TyVar ty') ])
+            pure (joinType uType' tType')
+              where checkType :: Type -> Type -> (Type, Type)
+                    checkType ty1@(P _) ty2 = (ty1, P ty2)
+                    checkType ty1@(M _) ty2 = (ty1, M ty2)
+                    checkType ty1       _   =
+                      error $ "checkType crashed because of: " ++ show ty1
+  
+                    joinType :: Type -> Type -> Type
+                    joinType ty@(P _) (P _) = ty
+                    joinType ty        _    = asM ty
+
+                    asM :: Type -> Type
+                    asM (P ty)   = M ty
+                    asM ty@(M _) = ty
           Return t -> do
             tType <- collectConstraints tau t
             pure (P tType)
@@ -341,6 +368,7 @@ applySubst s = \case
   x :→ y      -> applySubst s x :→ applySubst s y
   Unit        -> Unit
   x :× y      -> applySubst s x :× applySubst s y
+  M x         -> M (applySubst s x)
   P x         -> P (applySubst s x)
   TyCon f tys -> TyCon f (map (applySubst s) tys)
   TyVar v     -> lookUp v s
@@ -375,5 +403,114 @@ ty tau te = Typed te theType
           empty :: Constr
           empty = []
 
-asTyped :: Sig -> (Term -> Term) -> Typed -> Typed
-asTyped tau f = ty tau . f . termOf
+asTyped :: (Term -> Term) -> Typed -> Typed
+asTyped f (Typed t ty) = Typed (f t) ty
+
+type TypeError = String
+
+guardEither :: Bool -> a -> Either a ()
+guardEither b a = if b then pure () else Left a
+
+-- | Typed normalization.
+betaDeltaNormalTyped :: Sig -> DeltaRule -> Typed -> Either TypeError Typed
+betaDeltaNormalTyped tau delta = continue <=< \case
+  v@(Typed (Var _) _)         -> pure v
+  c@(Typed (Con _) _)         -> pure c
+  input@(Typed (Lam v t) _)   -> do
+    let t' = ty tau t
+    Typed t'' _ <- bdnd t'
+    let output@(Typed t''' _) = ty tau (Lam v t'')
+    check input output
+    pure output
+  input@(Typed (App t u) _)   -> do
+    let t' = ty tau t
+        u' = ty tau u
+    Typed t'' _ <- bdnd t'
+    case t'' of
+      Lam v t''' -> do output <- bdnd (ty tau (subst v u t'''))
+                       check input output
+                       pure output
+      t'''       -> do Typed u'' _ <- bdnd u'
+                       output <- pure (ty tau $ App t''' u'')
+                       check input output
+                       pure output
+  tt@(Typed TT _)             -> pure tt
+  input@(Typed (Pair t u) _)  -> do
+    let t' = ty tau t
+        u' = ty tau u
+    Typed t'' _ <- bdnd t'
+    Typed u'' _ <- bdnd u'
+    let output@(Typed t''' _) = ty tau (Pair t'' u'')
+    check input output
+    pure output
+  input@(Typed (Pi1 t) _)     -> do
+    let t' = ty tau t
+    Typed t'' _  <- bdnd t'
+    case t'' of
+      Pair x _ -> do output <- bdnd (ty tau x)
+                     check input output
+                     pure output
+      t'''     -> pure (ty tau $ Pi1 t''')
+  input@(Typed (Pi2 t) _)     -> do
+    let t' = ty tau t
+    Typed t'' _  <- bdnd t'
+    case t'' of
+      Pair _ y -> do output <- bdnd (ty tau y)
+                     check input output
+                     pure output
+      t'''     -> do output <- pure (ty tau $ Pi2 t''')
+                     check input output
+                     pure output
+  input@(Typed (Return t) _)  -> do
+    let t' = ty tau t
+    Typed t'' _ <- bdnd t'
+    let output@(Typed t''' _) = ty tau (Return t'')
+    check input output
+    pure output
+  input@(Typed (Let v t u) _) -> do
+    let t' = ty tau t
+        u' = ty tau u
+    Typed t'' _ <- bdnd t'
+    case t'' of
+      Return t'''  -> do output <- bdnd (ty tau (subst v t''' u))
+                         check input output
+                         pure output
+      Let w t''' x -> do output <- bdnd (ty tau (
+                                            Let fr t''
+                                              (Let v (subst w (Var fr) x) u)
+                                            ))         
+                         check input output
+                         pure output
+                           where fr:esh = fresh [u, x]
+      t'''         -> do Typed u'' _ <- bdnd u'
+                         output <- pure (ty tau $ Let v t''' u'')
+                         check input output
+                         pure output
+  where continue :: Typed -> Either TypeError Typed
+        continue t = case fmap bdnd (delta' t) of
+                       Just t' -> do output <- t'
+                                     check t output
+                                     pure output
+                       Nothing -> pure t
+
+        bdnd :: Typed -> Either TypeError Typed
+        bdnd = betaDeltaNormalTyped tau delta
+
+        delta' :: Typed -> Maybe Typed
+        delta' (Typed t ty) = fmap (flip Typed ty) (delta t)
+  
+        check :: Typed -> Typed -> Either TypeError ()
+        check (Typed t ty1) (Typed u ty2) =
+          case (ty1, ty2) of
+            (Nothing, Nothing)     -> pure ()
+            (Nothing, Just ty2') -> Left (
+              show t ++ " lacks at type, while " ++ show u ++ " : " ++ show ty2'
+              )
+            (Just ty1', Nothing)   -> Left (
+              show u ++ " lacks at type, while " ++ show t ++ " : " ++ show ty1'
+              )
+            (Just ty1', Just ty2') -> guardEither (tyEq popTy ty1' ty2') (
+              "Evaluation error: " ++ show t ++ " : " ++ show ty1 ++
+              ", while" ++ show u ++ " : " ++ show ty2
+              )
+

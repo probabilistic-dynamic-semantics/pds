@@ -165,29 +165,29 @@ type DeltaRule = Term -> Maybe Term
 -- | Beta normal forms, taking delta rules into account.
 betaDeltaNormal :: DeltaRule -> Term -> Term
 betaDeltaNormal delta = continue . \case
-        v@(Var _) -> v
-        c@(Con _) -> c
-        Lam v t   -> Lam v (bdnd t)
-        App t u   -> case bdnd t of
-          Lam v t' -> bdnd (subst v u t')
-          t'       -> App t' (bdnd u)
-        TT        -> TT
-        Pair t u  -> Pair (bdnd t) (bdnd u)
-        Pi1 t     -> case bdnd t of
-                       Pair x _ -> x
-                       t'       -> Pi1 t'
-        Pi2 t     -> case bdnd t of
-                       Pair _ y -> y
-                       t'       -> Pi2 t'
-        Return t  -> Return (bdnd t)
-        Let v t u -> case bdnd t of
-                       Return t'  -> bdnd (subst v t' u)
-                       Let w t' x -> bdnd (
-                         Let fr t'
-                           (Let v (subst w (Var fr) x) u)
-                         )
-                         where fr:esh = fresh [u, x]
-                       t'         -> Let v t' (bdnd u)
+  v@(Var _) -> v
+  c@(Con _) -> c
+  Lam v t   -> Lam v (bdnd t)
+  App t u   -> case bdnd t of
+                 Lam v t' -> bdnd (subst v u t')
+                 t'       -> App t' (bdnd u)
+  TT        -> TT
+  Pair t u  -> Pair (bdnd t) (bdnd u)
+  Pi1 t     -> case bdnd t of
+                 Pair x _ -> x
+                 t'       -> Pi1 t'
+  Pi2 t     -> case bdnd t of
+                 Pair _ y -> y
+                 t'       -> Pi2 t'
+  Return t  -> Return (bdnd t)
+  Let v t u -> case bdnd t of
+                 Return t'  -> bdnd (subst v t' u)
+                 Let w t' x -> bdnd (
+                   Let fr t'
+                     (Let v (subst w (Var fr) x) u)
+                   )
+                   where fr:esh = fresh [u, x]
+                 t'         -> Let v t' (bdnd u)
   where continue :: Term -> Term
         continue t = case fmap bdnd (delta t) of
                        Just t' -> t'

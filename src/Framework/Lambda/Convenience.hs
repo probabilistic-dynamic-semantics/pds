@@ -71,6 +71,7 @@ pattern Prop1 i     = SCon "prop1" `App` i
 pattern PopQUD s    = Pop "QUD" s
 pattern Mass t      = SCon "Mass" `App` t
 pattern TrueMass t  = SCon "TrueMass" `App` t
+pattern Normalize t = SCon "normalize" `App` t
 
 pattern Add, And, Eq, GE, Mult, Normal, Or, Uniform, UpdEpi, UpdCG, UpdHeight, UpdDTall, UpdSocPla, UpdProp1, PushQUD, Integrate :: Term -> Term -> Term
 pattern Add x y         = SCon "add" `App` (Pair x y)
@@ -100,6 +101,8 @@ pattern Disj x m n      = SCon "disj" `App` (Pair (Pair x m) n)
 pattern ITE p x y       = SCon "if_then_else" `App` (Pair (Pair p x) y)
 pattern Truncate m x y  = SCon "Truncate" `App` (Pair x y) `App` m
 pattern NormalCDF x y z = SCon "Normal_cdf" `App` (Pair x y) `App` z
+pattern NormalCCDF x y z = SCon "Normal_ccdf" `App` (Pair x y) `App` z
+
 
 pattern NormalCDF' v v' x y t = Pr (Let v (Normal x y) (Return (GE t (Var v'))))
 

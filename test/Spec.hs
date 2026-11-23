@@ -46,7 +46,7 @@ s1         = termOf $ getSemantics @Factivity 1 ["jo", "knows", "that", "bo", "i
 q1         = termOf $ getSemantics @Factivity 1 ["how", "likely", "that", "bo", "is", "a", "linguist"]
 discourse  = ty tauFact $ assert s1 >>> ask q1
 
-factivityExample = asTyped tauFact (betaDeltaNormal deltaRules . normalize . factivityRespond factivityPrior) discourse
+factivityExample = betaDeltaNormalTyped tauFact deltaRules $ asTyped (normalize . factivityRespond factivityPrior) discourse
 
 -- factivityResult :: Model
 -- factivityResult = Model [ ("v", "logit_normal(0.0, 1.0)")
@@ -57,7 +57,7 @@ s1'        = termOf $ getSemantics @Adjectives 1 ["jo", "is", "a", "soccer playe
 q1'        = termOf $ getSemantics @Adjectives 0 ["how", "tall", "jo", "is"]
 discourse' = ty tauAdj $ assert s1' >>> ask q1'
 
-scaleNormingExample = asTyped tauAdj (betaDeltaNormal deltaRules . adjectivesRespond scaleNormingPrior) discourse'
+-- scaleNormingExample = asTyped tauAdj (betaDeltaNormal deltaRules . adjectivesRespond scaleNormingPrior) discourse'
 
 -- scaleNormingResult :: Model
 -- scaleNormingResult = Model [ ("w", "normal(0.0, 1.0)")
@@ -66,7 +66,7 @@ scaleNormingExample = asTyped tauAdj (betaDeltaNormal deltaRules . adjectivesRes
 q1''        = termOf $ getSemantics @Adjectives 0 ["how", "likely", "that", "jo", "is", "tall"]
 discourse'' = ty tauAdj $ assert s1' >>> ask q1''
 
-likelihoodExample = asTyped tauAdj (betaDeltaNormal deltaRules . normalize . adjectivesRespond likelihoodPrior) discourse''
+likelihoodExample = betaDeltaNormalTyped tauAdj deltaRules $ asTyped (normalize . adjectivesRespond likelihoodPrior) discourse''
 
 -- likelihoodResult :: Model
 -- likelihoodResult = Model [ ("v", "normal(0.0, 1.0)")
@@ -154,8 +154,9 @@ lingSig = \case
   Left "ling" -> Just (e :→ t)
   _           -> Nothing
 
--- >>> factivityExample
--- (u ∼ Logit_normal(⟨0.0, 1.0⟩); (v ∼ Logit_normal(⟨0.0, 1.0⟩); (w ∼ Uniform(⟨0.0, 1.0⟩); Truncate(⟨0.0, 1.0⟩)(Normal(⟨(v / (1.0 + ((-1.0 * u) + (u * v)))), w⟩))))) : P r
+-- >>> putStrLn $ let Left x = factivityExample in x
+-- (λw.λw.(w ∼ (λw.[⟨λv.λx.(≥)(Pr((v ∼ CG(w); [ling(v)(b)])))(v), w⟩])(w); (λv.λu.(u ∼ (λu.[⟨u, u⟩])(u); (λu.λy.[⟨⋄, push_QUD(v)(u)⟩])(π₁(u))(π₂(u))))(π₁(w))(π₂(w))))(π₁(⟨⋄, upd_CG((factor((1.0 / Mass((v ∼ CG(u); (observe(if_then_else(⟨⟨tau_know(v), (∧)(epi(v)(j)(λv.ling(v)(b)))(ling(v)(b))⟩, epi(v)(j)(λv.ling(v)(b))⟩)); [v]))))); (v ∼ CG(u); (observe(if_then_else(⟨⟨tau_know(v), (∧)(epi(v)(j)(λv.ling(v)(b)))(ling(v)(b))⟩, epi(v)(j)(λv.ling(v)(b))⟩)); [v]))))(u)⟩)) lacks at type,
+-- while λw.[⟨⋄, push_QUD(λx.λv.(≥)((TrueMass((v ∼ CG(w); [ling(v)(b)])) / Mass((v ∼ CG(w); [ling(v)(b)]))))(x))(w)⟩] : φ → P  (⋄ × Q ι1 r φ)
 
 -- >>> ty tau0 ((Lam "v" (Var "v")) @@ Var "v")
 -- (λv.v)(v) : β
@@ -165,3 +166,16 @@ lingSig = \case
 
 -- >>> betaDeltaNormalTyped tauFact deltaRules (ty tau0 $ (Lam "v" (Var "v")) @@ Var "v")
 -- Right v : α
+
+-- >>> betaDeltaNormalTyped tau0 deltaRules (ty tau0 $ (Lam "m" (Let "y" (Return m) (Return y))))
+-- Right λm.[m] : α → P  α
+
+-- >>> mapM_ (\c -> putStrLn (c ++ " : " ++ show (tauFact (Left c)))) ["factor", "upd_CG", "observe", "if_then_else", "tau_know", "epi", "Mass", "Pr"]
+-- factor : Just r → M  ⋄
+-- upd_CG : Just P  ι → σ → σ
+-- observe : Just t → M  ⋄
+-- if_then_else : Just t × α × α → α
+-- tau_know : Just σ → t
+-- epi : Just ι → e → (ω → t) → t
+-- Mass : Just G  α  β → r
+-- Pr : Just P  t → r

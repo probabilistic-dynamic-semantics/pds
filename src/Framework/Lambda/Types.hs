@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE PatternSynonyms #-}
 
 {-|
 Module      : Framework.Lambda.Types
@@ -22,6 +23,8 @@ module Framework.Lambda.Types ( arity
                               , Type(..)
                               , Typed(..)
                               , unify
+                              , pattern M
+                              , pattern P
                               ) where
 
 import Control.Monad ((<=<))
@@ -43,11 +46,15 @@ data Type = Atom String
           | Type :→ Type
           | Unit
           | Type :× Type
-          | M Type
-          | P Type
+          | G Type Type
           | TyCon String [Type]
           | TyVar String
   deriving (Eq)
+
+pattern M, P :: Type -> Type
+pattern M x = G (Atom "M") x
+pattern P x = G (Atom "P") x
+
 
 -- | Relations on types.
 type TypeRel = Type -> Type -> Bool
@@ -74,7 +81,7 @@ tyEq f α β = applySubst substα α' == applySubst substβ β'
           ty1 :→ ty2  -> applyRed f ty1 :→ applyRed f ty2
           Unit        -> Unit
           ty1 :× ty2  -> applyRed f ty1 :× applyRed f ty2
-          P ty        -> P (applyRed f ty)
+          G a ty        -> G (applyRed f a) (applyRed f ty)
           TyCon g tys -> TyCon g (map (applyRed f) tys)
           v@(TyVar _) -> v
 
@@ -117,14 +124,15 @@ instance Show Type where
     a@(_ :→ _) :× b          -> "((" ++ show a ++ ") × " ++ show b ++ ")"
     a :× b@(_ :→ _)          -> "(" ++ show a ++ " × (" ++ show b ++ "))"
     a :× b                   -> show a ++ " × " ++ show b
-    M a                      -> "M" ++ wrap a
-    P a                      -> "P" ++ wrap a
+    M a                      -> "M " ++ wrap a
+    P a                      -> "P " ++ wrap a
+    G a b                    -> "G " ++ wrap a ++ " " ++ wrap b
     TyCon f tys              -> f ++ concatMap wrap tys
     TyVar s                  -> s
     where wrap :: Type -> String
           wrap a@(_ :→ _)    = " (" ++ show a ++ ")"
           wrap a@(_ :× _)    = " (" ++ show a ++ ")"
-          wrap a@(P _)       = " (" ++ show a ++ ")"
+          wrap a@(M _)       = " (" ++ show a ++ ")"
           wrap a@(TyCon _ _) = " (" ++ show a ++ ")"
           wrap a             = " "  ++ show a
 
@@ -136,8 +144,7 @@ arity (a :→ b)      = arity b + 1
 arity _             = 0
 order (a :→ b)      = max (order a + 1) (order b)
 order (a :× b)      = max (order a) (order b)
-order (M a)         = order a
-order (P a)         = order a
+order (G _ a)       = order a
 order (TyCon _ tys) = maximum (map order tys)
 order _             = 0
   
@@ -160,8 +167,7 @@ getVars = nub . getVars'
         getVars' (TyVar v)     = [v]
         getVars' (a :→ b)      = getVars' a ++ getVars' b
         getVars' (a :× b)      = getVars' a ++ getVars' b
-        getVars' (M a)         = getVars' a
-        getVars' (P a)         = getVars' a
+        getVars' (G a b)       = getVars' a ++ getVars' b
         getVars' (TyCon _ tys) = concatMap getVars' tys
         getVars' _             = []
 
@@ -193,10 +199,7 @@ unify cs = do
       (Unit, _)                        -> Nothing -- No mismatches allowed.
       (x :× y, z :× w)                 -> Just (u1 ++ [(x, z), (y, w)], u2) -- Break apart products
       (_ :× _, _)                      -> Nothing -- No mismatches allowed.
-      (M x, M y)                       -> Just (u1 ++ [(x, y)], u2) -- Break apart @M@.
-      (M _, _)                         -> Nothing -- No mismatches allowed.
-      (P x, P y)                       -> Just (u1 ++ [(x, y)], u2) -- Break apart @P@.
-      (P _, _)                         -> Nothing -- No mismatches allowed.
+      (G x y, G z w)                   -> Just (u1 ++ [(x, z), (y, w)], u2) -- Break apart @M@.
       (TyCon f tys1
         , TyCon g tys2)  | f == g &&
                            length tys1 ==
@@ -212,8 +215,7 @@ unify cs = do
     substType x y z             | z == x = y
     substType x y (z1 :→ z2)             = substType x y z1 :→ substType x y z2
     substType x y (z1 :× z2)             = substType x y z1 :× substType x y z2
-    substType x y (M z)                  = M (substType x y z)
-    substType x y (P z)                  = P (substType x y z)
+    substType x y (G z1 z2)              = G (substType x y z1) (substType x y z2)
     substType x y (TyCon f tys)          = TyCon f (map (substType x y) tys)
     substType _ _ z                      = z
 
@@ -222,8 +224,7 @@ unify cs = do
     occurs x = \case -- List out possible @y@s.
       y :→ z      -> occurs x y || occurs x z
       y :× z      -> occurs x y || occurs x z
-      M y         -> occurs x y
-      P y         -> occurs x y
+      G y z       -> occurs x y || occurs x z
       TyCon _ tys -> or (map (occurs x) tys)
       y           -> x == y -- The "otherwise" case; fly, @At@, @Unit@, and @TyVar@.
 
@@ -337,26 +338,42 @@ computeType tau t = do ty <- collectConstraints tau t
                 i v' | v' /= v = h v'
             put (types, i, cs')
             tType <- collectConstraints tau t
-            (ty':pes', j, cs'') <- get
+            (ty':p':es', j, cs'') <- get
             subst <- lift (unify cs'')
             let tType' = applySubst subst tType
                 uType' = applySubst subst uType
-            put (pes', j, cs'' ++ [ checkType tType' newTy
-                                  , checkType uType' (TyVar ty') ])
-            pure (joinType uType' tType')
-              where checkType :: Type -> Type -> (Type, Type)
-                    checkType ty1@(P _) ty2 = (ty1, P ty2)
-                    checkType ty1@(M _) ty2 = (ty1, M ty2)
-                    checkType ty1       _   =
-                      error $ "checkType crashed because of: " ++ show ty1
+            put (es', j, cs'' ++ [ checkType p' tType' newTy
+                                  , checkType p' uType' (TyVar ty') ])
+            pure (joinType p' uType' tType')
+              where checkType :: String -> Type -> Type -> (Type, Type)
+                    checkType _  ty1@(G a _) ty2 = (ty1, G a ty2)
+                    checkType p' ty1         ty2 = (ty1, G (TyVar p') ty2)
+                      -- error $ "checkType crashed in " ++
+                      -- show (Let v t u) ++ " : " ++ show ty1
+
+                    joinType :: String -> Type -> Type -> Type
+                    joinType p' body bound = case (bound, body) of
+                                               (P _, G f b) -> G f b       -- P ⊔ f = f
+                                               (M _, G _ b) -> M b         -- M absorbs
+                                               (_,   P b)   -> G bFl b     -- f ⊔ P = f
+                                                 where bFl = case bound of
+                                                         G f _ -> f           -- bound term's flavor variable
+                                                         _     -> TyVar p'    -- bound term unresolved: use the fallback
+                                               (_,   M b)   -> M b
+                                               _            -> error $ "joinType stuck: " ++ show body ++ " and " ++ show bound
   
-                    joinType :: Type -> Type -> Type
-                    joinType ty@(P _) (P _) = ty
-                    joinType ty        _    = asM ty
+                    -- joinType :: Type -> Type -> Type
+                    -- joinType ty@(P  _) (P _)           = ty
+                    -- joinType ty        (M _)           = asM ty
+                    -- joinType ty@(M _)  (P _)           = ty
+                    -- joinType ty        (G (TyVar _) _) = ty
+                    -- joinType ty1       ty2@(TyVar _)   = ty1
+                    -- joinType ty1       ty2             =
+                    --   error $
+                    --   "You got: " ++ show ty1 ++ " and " ++ show ty2 ++ "."
 
                     asM :: Type -> Type
-                    asM (P ty)   = M ty
-                    asM ty@(M _) = ty
+                    asM (G _ ty) = M ty
           Return t -> do
             tType <- collectConstraints tau t
             pure (P tType)
@@ -368,8 +385,7 @@ applySubst s = \case
   x :→ y      -> applySubst s x :→ applySubst s y
   Unit        -> Unit
   x :× y      -> applySubst s x :× applySubst s y
-  M x         -> M (applySubst s x)
-  P x         -> P (applySubst s x)
+  G x y       -> G (applySubst s x) (applySubst s y)
   TyCon f tys -> TyCon f (map (applySubst s) tys)
   TyVar v     -> lookUp v s
     where  lookUp :: String -> Constr -> Type
@@ -447,7 +463,7 @@ betaDeltaNormalTyped tau delta = continue <=< \case
     let t' = ty tau t
     Typed t'' _  <- bdnd t'
     case t'' of
-      Pair x _ -> do output <- bdnd (ty tau x)
+      Pair x _ -> do output <- pure (ty tau x)
                      check input output
                      pure output
       t'''     -> pure (ty tau $ Pi1 t''')
@@ -455,7 +471,7 @@ betaDeltaNormalTyped tau delta = continue <=< \case
     let t' = ty tau t
     Typed t'' _  <- bdnd t'
     case t'' of
-      Pair _ y -> do output <- bdnd (ty tau y)
+      Pair _ y -> do output <- pure (ty tau y)
                      check input output
                      pure output
       t'''     -> do output <- pure (ty tau $ Pi2 t''')
@@ -476,7 +492,7 @@ betaDeltaNormalTyped tau delta = continue <=< \case
                          check input output
                          pure output
       Let w t''' x -> do output <- bdnd (ty tau (
-                                            Let fr t''
+                                            Let fr t'''
                                               (Let v (subst w (Var fr) x) u)
                                             ))         
                          check input output
@@ -504,13 +520,13 @@ betaDeltaNormalTyped tau delta = continue <=< \case
           case (ty1, ty2) of
             (Nothing, Nothing)     -> pure ()
             (Nothing, Just ty2') -> Left (
-              show t ++ " lacks at type, while " ++ show u ++ " : " ++ show ty2'
+              show t ++ " lacks at type,\nwhile " ++ show u ++ " : " ++ show ty2'
               )
             (Just ty1', Nothing)   -> Left (
-              show u ++ " lacks at type, while " ++ show t ++ " : " ++ show ty1'
+              show u ++ " lacks at type,\nwhile " ++ show t ++ " : " ++ show ty1'
               )
             (Just ty1', Just ty2') -> guardEither (tyEq popTy ty1' ty2') (
               "Evaluation error: " ++ show t ++ " : " ++ show ty1 ++
-              ", while" ++ show u ++ " : " ++ show ty2
+              ",\nwhile" ++ show u ++ " : " ++ show ty2
               )
 

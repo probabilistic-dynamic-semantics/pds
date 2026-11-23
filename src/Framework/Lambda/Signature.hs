@@ -89,8 +89,8 @@ tauProbProg = \case
   Left "𝟙"            -> Just (t :→ r)
   Left "𝔼"            -> Just ((α :→ r) :→ P α :→ r)
   Left "Pr"           -> Just (P t :→ r)
-  Left "Mass"         -> Just (M α :→ r)
-  Left "TrueMass"     -> Just (M t :→ r)
+  Left "Mass"         -> Just (G α β :→ r)
+  Left "TrueMass"     -> Just (G α β :→ r)
   Left "Integrate"    -> Just (P r :× (r :→ r) :→ r)
   _                   -> Nothing
 

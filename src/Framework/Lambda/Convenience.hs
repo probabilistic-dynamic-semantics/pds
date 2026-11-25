@@ -26,6 +26,7 @@ import Framework.Lambda.Types
 α = TyVar "α"
 β = TyVar "β"
 γ = TyVar "γ"
+δ = TyVar "δ"
 ι = TyVar "ι"
 ω = TyVar "ω"
 κ = TyVar "κ"

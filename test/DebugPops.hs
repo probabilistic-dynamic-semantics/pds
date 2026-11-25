@@ -721,218 +721,7 @@ runGradeTests = do
     (Lam "m" (Lam "n"
       (Let "x" (Var "m") (Var "n"))))
 
--- >>> runPopTests
--- PASS: Push QUD
---   Term:     push_QUD(qReal)(state)
---   Expected: Just Q ι r S
---   Actual:   Just Q ι r S
--- PASS: Immediate pop
---   Term:     pop_QUD(push_QUD(qReal)(state))
---   Expected: Just ((r → ι → t) × S)
---   Actual:   Just ((r → ι → t) × S)
--- PASS: Pop through R
---   Term:     pop_QUD(push_R(entity)(push_QUD(qReal)(state)))
---   Expected: Just ((r → ι → t) × R S)
---   Actual:   Just ((r → ι → t) × R S)
--- PASS: Pop most recent QUD
---   Term:     pop_QUD(push_QUD(qEntity)(push_QUD(qReal)(state)))
---   Expected: Just ((e → ι → t) × Q ι r S)
---   Actual:   Just ((e → ι → t) × Q ι r S)
--- PASS: Two successive pops
---   Term:     pop_QUD(π₂(pop_QUD(push_QUD(qEntity)(push_QUD(qReal)(state)))))
---   Expected: Just ((r → ι → t) × S)
---   Actual:   Just ((r → ι → t) × S)
--- PASS: Delayed pop
---   Term:     (λx.pop_QUD(x))(push_QUD(qReal)(state))
---   Expected: Just ((r → ι → t) × S)
---   Actual:   Just ((r → ι → t) × S)
--- PASS: Compatible QUD argument
---   Term:     π₁(pop_QUD(push_QUD(qReal)(state)))(real)
---   Expected: Just ι → t
---   Actual:   Just ι → t
--- PASS: Incompatible QUD argument
---   Term:     π₁(pop_QUD(push_QUD(qReal)(state)))(entity)
---   Expected: Nothing
---   Actual:   Nothing
--- PASS: Incompatible top QUD
---   Term:     π₁(pop_QUD(push_QUD(qEntity)(push_QUD(qReal)(state))))(real)
---   Expected: Nothing
---   Actual:   Nothing
--- PASS: Unresolved pop
---   Term:     λx.pop_QUD(x)
---   Expected: Just s → ((a → i → t) × popQ i a s)
---   Actual:   Just β → ((γ → δ → t) × popQ δ γ β)
--- >>> runUnifyTests
--- Immediate cancellation:
--- Just [(i,ι),(a,r),(result,S)]
--- Cancellation through R:
--- Just [(i,ι),(a,r),(result,R S)]
--- Delayed cancellation:
--- Just [(s,Q ι r S),(i,ι),(a,r),(result,S)]
--- Delayed cancellation against a rigid type:
--- Just [(s,Q ι r S),(i,ι),(a,r)]
--- Incompatible parameters:
--- Nothing
--- >>> runDeferredPopTests
--- Delayed cancellation, reversed order:
--- Just [(s,Q ι r S),(i,ι),(a,r)]
--- Delayed cancellation, reversed equality:
--- Just [(s,Q ι r S),(i,ι),(a,r)]
--- Delayed but incompatible cancellation:
--- Nothing
--- >>> runAllExtendedTests
--- PASS: Interleaved pushes
---   Term:     push_R(entity)(push_QUD(qEntity)(push_R(entity)(push_QUD(qReal)(state))))
---   Expected: Just R (Q ι e (R (Q ι r S)))
---   Actual:   Just R (Q ι e (R (Q ι r S)))
--- PASS: Pop Q through R
---   Term:     pop_QUD(push_R(entity)(push_QUD(qEntity)(push_R(entity)(push_QUD(qReal)(state)))))
---   Expected: Just ((e → ι → t) × R (R (Q ι r S)))
---   Actual:   Just ((e → ι → t) × R (R (Q ι r S)))
--- PASS: Pop outer R
---   Term:     pop_R(push_R(entity)(push_QUD(qEntity)(push_R(entity)(push_QUD(qReal)(state)))))
---   Expected: Just e × Q ι e (R (Q ι r S))
---   Actual:   Just e × Q ι e (R (Q ι r S))
--- PASS: Pop R through Q
---   Term:     pop_R(push_QUD(qReal)(push_R(entity)(state)))
---   Expected: Just e × Q ι r S
---   Actual:   Just e × Q ι r S
--- PASS: Successively pop Q and R
---   Term:     pop_R(π₂(pop_QUD(push_R(entity)(push_QUD(qEntity)(push_R(entity)(push_QUD(qReal)(state)))))))
---   Expected: Just e × R (Q ι r S)
---   Actual:   Just e × R (Q ι r S)
--- PASS: Successively pop Q, R, Q
---   Term:     pop_QUD(π₂(pop_R(π₂(pop_QUD(push_R(entity)(push_QUD(qEntity)(push_R(entity)(push_QUD(qReal)(state)))))))))
---   Expected: Just ((r → ι → t) × R S)
---   Actual:   Just ((r → ι → t) × R S)
--- PASS: Empty both stacks
---   Term:     π₂(pop_R(π₂(pop_QUD(π₂(pop_R(π₂(pop_QUD(push_R(entity)(push_QUD(qEntity)(push_R(entity)(push_QUD(qReal)(state))))))))))))
---   Expected: Just S
---   Actual:   Just S
--- PASS: Push again after popping
---   Term:     push_QUD(qReal)(π₂(pop_QUD(push_R(entity)(push_QUD(qEntity)(push_R(entity)(push_QUD(qReal)(state)))))))
---   Expected: Just Q ι r (R (R (Q ι r S)))
---   Actual:   Just Q ι r (R (R (Q ι r S)))
--- PASS: Multiple delayed substitutions
---   Permutations tested: 6
---   Failures: 0
--- PASS: Nested pop constructors
---   Permutations tested: 2
---   Failures: 0
--- PASS: Pop through multiple intervening constructors
---   Permutations tested: 2
---   Failures: 0
--- PASS: Preserve parameters of intervening constructors
---   Permutations tested: 1
---   Failures: 0
--- PASS: Two pops of the same state
---   Permutations tested: 6
---   Failures: 0
--- PASS: Conflicting pops of the same state
---   Permutations tested: 6
---   Failures: 0
--- PASS: Pop inside an arrow type
---   Permutations tested: 2
---   Failures: 0
--- PASS: Pop inside a graded type
---   Permutations tested: 2
---   Failures: 0
--- PASS: Pop cancellation before occurs check
---   Permutations tested: 1
---   Failures: 0
--- PASS: Abstract over state, retrieve QUD
---   Term:     (λx.π₁(pop_QUD(x)))(push_QUD(qReal)(state))
---   Expected: Just r → ι → t
---   Actual:   Just r → ι → t
--- PASS: Abstract over state, retrieve remainder
---   Term:     (λx.π₂(pop_QUD(x)))(push_QUD(qReal)(state))
---   Expected: Just S
---   Actual:   Just S
--- PASS: Higher-order application of pop function
---   Term:     (λf.f(push_QUD(qReal)(state)))(λx.pop_QUD(x))
---   Expected: Just ((r → ι → t) × S)
---   Actual:   Just ((r → ι → t) × S)
--- PASS: Abstract over pushed QUD
---   Term:     λx.pop_QUD(push_QUD(x)(state))
---   Expected: Just (a → i → t) → ((a → i → t) × S)
---   Actual:   Just (β → γ → t) → ((β → γ → t) × S)
--- PASS: Two uses of the same state
---   Term:     (λx.⟨π₁(pop_QUD(x)), π₁(pop_QUD(x))⟩)(push_QUD(qReal)(state))
---   Expected: Just ((r → ι → t) × (r → ι → t))
---   Actual:   Just ((r → ι → t) × (r → ι → t))
--- PASS: Incompatible uses of the same state
---   Term:     (λx.⟨π₁(pop_QUD(x))(real), π₁(pop_QUD(x))(entity)⟩)(push_QUD(qReal)(state))
---   Expected: Nothing
---   Actual:   Nothing
--- PASS: Push and pop through two abstractions
---   Term:     (λf.λx.pop_QUD(push_QUD(f)(x)))(qReal)(state)
---   Expected: Just ((r → ι → t) × S)
---   Actual:   Just ((r → ι → t) × S)
--- PASS: Pop through R with unknown tail
---   Term:     λx.pop_QUD(push_R(entity)(x))
---   Expected: Just s → ((a → i → t) × R (popQ i a s))
---   Actual:   Just α → ((ζ → η → t) × R (popQ η ζ α))
--- PASS: Pop Q from empty state
---   Term:     pop_QUD(state)
---   Expected: Nothing
---   Actual:   Nothing
--- PASS: Pop Q from state containing only R
---   Term:     pop_QUD(push_R(entity)(state))
---   Expected: Nothing
---   Actual:   Nothing
--- PASS: Pop Q twice from singleton Q stack
---   Term:     pop_QUD(π₂(pop_QUD(push_QUD(qReal)(state))))
---   Expected: Nothing
---   Actual:   Nothing
--- PASS: Project value from empty pop
---   Term:     π₁(pop_QUD(state))
---   Expected: Nothing
---   Actual:   Nothing
--- PASS: Incompatible pops of unknown shared state
---   Term:     λx.⟨π₁(pop_QUD(x))(real), π₁(pop_QUD(x))(entity)⟩
---   Expected: Nothing
---   Actual:   Nothing
--- PASS: Immediate push/pop reduction
---   Input:    pop_QUD(push_QUD(qReal)(state)) : ((r → ι → t) × S)
---   Expected: ⟨qReal, state⟩ : ((r → ι → t) × S)
---   Actual:   Right ⟨qReal, state⟩ : ((r → ι → t) × S)
--- PASS: Reduction through R
---   Input:    pop_QUD(push_R(entity)(push_QUD(qReal)(state))) : ((r → ι → t) × R S)
---   Expected: ⟨qReal, push_R(entity)(state)⟩ : ((r → ι → t) × R S)
---   Actual:   Right ⟨qReal, push_R(entity)(state)⟩ : ((r → ι → t) × R S)
--- PASS: Reduction through Q
---   Input:    pop_R(push_QUD(qReal)(push_R(entity)(state))) : e × Q ι r S
---   Expected: ⟨entity, push_QUD(qReal)(state)⟩ : e × Q ι r S
---   Actual:   Right ⟨entity, push_QUD(qReal)(state)⟩ : e × Q ι r S
--- PASS: Reduction of interleaved stacks
---   Input:    pop_QUD(push_R(entity)(push_QUD(qEntity)(push_R(entity)(push_QUD(qReal)(state))))) : ((e → ι → t) × R (R (Q ι r S)))
---   Expected: ⟨qEntity, push_R(entity)(push_R(entity)(push_QUD(qReal)(state)))⟩ : ((e → ι → t) × R (R (Q ι r S)))
---   Actual:   Right ⟨qEntity, push_R(entity)(push_R(entity)(push_QUD(qReal)(state)))⟩ : ((e → ι → t) × R (R (Q ι r S)))
--- PASS: Successive reductions
---   Input:    pop_R(π₂(pop_QUD(push_R(entity)(push_QUD(qEntity)(push_R(entity)(push_QUD(qReal)(state))))))) : e × R (Q ι r S)
---   Expected: ⟨entity, push_R(entity)(push_QUD(qReal)(state))⟩ : e × R (Q ι r S)
---   Actual:   Right ⟨entity, push_R(entity)(push_QUD(qReal)(state))⟩ : e × R (Q ι r S)
--- PASS: Beta reduction exposes pop redex
---   Input:    (λx.pop_QUD(x))(push_QUD(qReal)(state)) : ((r → ι → t) × S)
---   Expected: ⟨qReal, state⟩ : ((r → ι → t) × S)
---   Actual:   Right ⟨qReal, state⟩ : ((r → ι → t) × S)
--- PASS: Push/pop reduction with free state
---   Input:    pop_QUD(push_QUD(qReal)(s)) : ((r → ι → t) × α)
---   Expected: ⟨qReal, s⟩ : ((r → ι → t) × α)
---   Actual:   Right ⟨qReal, s⟩ : ((r → ι → t) × α)
--- PASS: Push/pop reduction under lambda
---   Input:    λx.pop_QUD(push_QUD(qReal)(x)) : α → ((r → ι → t) × α)
---   Expected: λx.⟨qReal, x⟩ : α → ((r → ι → t) × α)
---   Actual:   Right λx.⟨qReal, x⟩ : α → ((r → ι → t) × α)
--- PASS: Pop through R with free state
---   Input:    pop_QUD(push_R(entity)(s)) : ((ζ → η → t) × R (popQ η ζ α))
---   Expected: ⟨π₁(pop_QUD(s)), push_R(entity)(π₂(pop_QUD(s)))⟩ : ((ι → κ → t) × R (popQ κ ι θ))
---   Actual:   Right ⟨π₁(pop_QUD(s)), push_R(entity)(π₂(pop_QUD(s)))⟩ : ((ι → κ → t) × R (popQ κ ι θ))
--- PASS: Pop through R under lambda
---   Input:    λx.pop_QUD(push_R(entity)(x)) : α → ((ζ → η → t) × R (popQ η ζ α))
---   Expected: λx.⟨π₁(pop_QUD(x)), push_R(entity)(π₂(pop_QUD(x)))⟩ : θ → ((ι → κ → t) × R (popQ κ ι θ))
---   Actual:   Right λx.⟨π₁(pop_QUD(x)), push_R(entity)(π₂(pop_QUD(x)))⟩ : θ → ((ι → κ → t) × R (popQ κ ι θ))
--- >>> runDeepPopTests
+-- >>> runOccursPopTests
 -- Apparent cycle, order 1:
 -- Just [(z,Q ι r s)]
 -- Apparent cycle, order 2:
@@ -941,6 +730,7 @@ runGradeTests = do
 -- Nothing
 -- Genuine recursive type involving pop:
 -- Nothing
+-- >>> runReflexivePopTests
 -- Identical valid pop types:
 -- Just []
 -- Identical incompatible pop types:
@@ -951,6 +741,7 @@ runGradeTests = do
 -- Just [(popQ ι r s,popQ ι r s)]
 -- Initially unresolved, subsequently underflowing:
 -- Nothing
+-- >>> runSharedPathTests
 -- PASS: Same QUD through different access paths
 --   Term:     λx.⟨π₁(pop_QUD(x)), π₁(pop_QUD(push_R(entity)(x)))⟩
 --   Expected: Just s → ((a → i → t) × (a → i → t))
@@ -971,6 +762,7 @@ runGradeTests = do
 --   Term:     λx.⟨π₁(pop_QUD(push_QUD(qReal)(x))), π₁(pop_QUD(push_QUD(qEntity)(x)))⟩
 --   Expected: Just s → ((r → ι → t) × (e → ι → t))
 --   Actual:   Just α → ((r → ι → t) × (e → ι → t))
+-- >>> runProbabilisticPopTests
 -- Ordinary abstraction:
 -- (λx.needsS(π₂(pop_QUD(x))))(push_QUD(qReal)(state)) : e
 -- Abstraction with Return:
@@ -983,6 +775,7 @@ runGradeTests = do
 -- ⌜(x ∼ [state]; [π₁(pop_QUD(x))])⌝ is not assigned a type.
 -- Successive probabilistic bindings:
 -- (x ∼ [push_QUD(qReal)(state)]; (y ∼ [pop_QUD(x)]; [π₁(y)])) : P (r → ι → t)
+-- >>> runSignatureBoundaryTests
 -- Inferred getter type:
 -- Just β → γ → δ → t
 -- Direct application to valid state:
@@ -997,7 +790,68 @@ runGradeTests = do
 -- ⌜(λx.π₁(pop_QUD(x)))(push_QUD(qEntity)(state))(real)⌝ is not assigned a type.
 -- Constant application to wrong QUD:
 -- getter(push_QUD(qEntity)(state))(real) : θ → t
--- >>> runGradeTests
--- λm.(x ∼ m; [x]) : G γ ε → G γ ε
--- λm.λk.(x ∼ m; k(x)) : G ε γ → (γ → G ζ η) → G (+ ε ζ) η
--- λm.λn.(x ∼ m; n) : G δ γ → G ε ζ → G (+ δ ε) ζ
+
+runGradeConstraintTests :: IO ()
+runGradeConstraintTests = do
+  let sig (Left "needsM") = Just (M Unit :→ eTy)
+      sig (Left "measure") = Just (M Unit)
+      sig c = testSig c
+
+      f = Lam "m" (Lam "n"
+            (App (con "needsM")
+              (Let "x" (Var "m") (Var "n"))))
+
+      p = Return TT
+      m = con "measure"
+
+  putStrLn "Inferred abstraction type:"
+  print $ ty sig f
+
+  putStrLn "P + P:"
+  print $ ty sig (App (App f p) p)
+
+  putStrLn "P + M:"
+  print $ ty sig (App (App f p) m)
+
+  putStrLn "M + P:"
+  print $ ty sig (App (App f m) p)
+
+  putStrLn "M + M:"
+  print $ ty sig (App (App f m) m)
+
+-- >>> runGradeConstraintTests
+-- Inferred abstraction type:
+-- λm.λn.needsM((x ∼ m; n)) : G δ γ → G ε ⋄ → e
+-- P + P:
+-- ⌜(λm.λn.needsM((x ∼ m; n)))([⋄])([⋄])⌝ is not assigned a type.
+-- P + M:
+-- (λm.λn.needsM((x ∼ m; n)))([⋄])(measure) : e
+-- M + P:
+-- (λm.λn.needsM((x ∼ m; n)))(measure)([⋄]) : e
+-- M + M:
+-- (λm.λn.needsM((x ∼ m; n)))(measure)(measure) : e
+
+runGradeUnifyTests :: IO ()
+runGradeUnifyTests = do
+  let g = TyVar "g"
+      h = TyVar "h"
+      p = Atom "P"
+      m = Atom "M"
+      cs = [(TyCon "+" [g, h], m)]
+
+  print $ unify cs
+  print $ unify (cs ++ [(g, p)])
+  print $ unify (cs ++ [(g, m)])
+  print $ unify (cs ++ [(g, p), (h, p)])
+  print $ unify (cs ++ [(g, p), (h, m)])
+  print $ unify (cs ++ [(g, m), (h, p)])
+  print $ unify (cs ++ [(g, m), (h, m)])
+
+-- >>> runGradeUnifyTests
+-- Just [(+ g h,M)]
+-- Just [(h,M),(g,P)]
+-- Just [(g,M)]
+-- Nothing
+-- Just [(g,P),(h,M)]
+-- Just [(g,M),(h,P)]
+-- Just [(g,M),(h,M)]

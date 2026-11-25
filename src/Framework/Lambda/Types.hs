@@ -29,6 +29,7 @@ module Framework.Lambda.Types ( arity
                               , pattern P
                               ) where
 
+import Control.Applicative ((<|>))
 import Control.Monad ((<=<))
 import Control.Monad.State    (evalStateT, get, lift, put, StateT)
 import Data.Char              (toLower)
@@ -98,17 +99,6 @@ tyEq f α β = applySubst substα α' == applySubst substβ β'
 
 -- | Add grades.
 gradePlus :: TypeRed
--- gradePlus = \case
---   TyCon "+" gs
---     | Atom "M" `elem` gs || Atom "P" `elem` gs -> Just (foldr pl (Atom "P") gs)
---     where pl g1 g2 = case (g1, g2) of
---                        (Atom "P", g2)       -> g2
---                        (g1      , Atom "P") -> g1
---                        (Atom "M", _)        -> Atom "M"
---                        (_,        Atom "M") -> Atom "M"
---                        (ty1,      ty2)      -> TyCon "+" [ty1, ty2]
-                       
---   _            -> Nothing
 gradePlus = \case -- Claude-generated.
   TyCon "+" gs ->
     let flat (TyCon "+" xs) = concatMap flat xs
@@ -202,7 +192,7 @@ instance Show Type where
     where wrap :: Type -> String
           wrap a@(_ :→ _)    = " (" ++ show a ++ ")"
           wrap a@(_ :× _)    = " (" ++ show a ++ ")"
-          wrap a@(M _)       = " (" ++ show a ++ ")"
+          wrap a@(G _ _)     = " (" ++ show a ++ ")"
           wrap a@(TyCon _ _) = " (" ++ show a ++ ")"
           wrap a             = " "  ++ show a
 
@@ -294,12 +284,12 @@ unify cs = do
          -> Just (u1 ++ [(x', y')], u2)                     -- reduce first
       (TyCon "+" ts, Atom "P") -> Just (u1 ++ [(t, Atom "P") | t <- ts], u2)
       (Atom "P", TyCon "+" ts) -> Just (u1 ++ [(t, Atom "P") | t <- ts], u2)
-      eq@(TyCon "+" _, _)      -> Just (u1 ++ [eq], u2)           -- stuck (e.g. against M): keep
-      eq@(_, TyCon "+" _)      -> Just (u1 ++ [eq], u2)
       (x@(TyVar _), y)    | occurs x y -> Nothing -- Impredicativity; uh oh!
       eq@(x@(TyVar _), y)              -> Just ( map (substEqs x y) u1 ++ [eq]
                                                , map (substEqs x y) u2 ) -- Substitute.
       (x, TyVar y)                     -> Just (u1 ++ [(TyVar y, x)], u2) -- Swap.
+      eq@(TyCon "+" _, _)      -> Just (u1 ++ [eq], u2)           -- stuck (e.g. against M): keep
+      eq@(_, TyCon "+" _)      -> Just (u1 ++ [eq], u2)
       eq@(x, y) | isPopTy x || isPopTy y -> Just (u1 ++ [eq], u2)
       (Atom _, _)                      -> Nothing -- We've already handled equalities.
       (x :→ y, z :→ w)                 -> Just (u1 ++ [(x, z), (y, w)], u2) -- Break apart arrows.
@@ -640,9 +630,9 @@ betaDeltaNormalTyped red tau delta = continue <=< \case
             (Just ty1', Nothing)   -> Left (
               show u ++ " lacks a type,\nwhile " ++ show t ++ " : " ++ show ty1'
               )
-            (Just ty1', Just ty2') -> guardEither (instanceOf red ty1' ty2') (
-              "Evaluation error: " ++ show t ++ " : " ++ show ty1 ++
-              ",\nwhile " ++ show u ++ " : " ++ show ty2
+            (Just ty1', Just ty2') -> guardEither (subsetOf red ty1' ty2') (
+              "Evaluation error: " ++ show t ++ " : " ++ show ty1' ++
+              ",\nwhile " ++ show u ++ " : " ++ show ty2'
               )
 
 -- | Replace type variables by rigid atoms (names can't clash with real atoms).
@@ -748,3 +738,22 @@ prioritizeConstraints cs = ordinary ++ deferred
     noPops (x, y) =
       null (popRequirements x) &&
       null (popRequirements y)
+
+
+gradeVars :: Type -> [String]
+gradeVars = \case
+  G f a      -> getVars f ++ gradeVars a
+  a :→ b     -> gradeVars a ++ gradeVars b
+  a :× b     -> gradeVars a ++ gradeVars b
+  TyCon _ ts -> concatMap gradeVars ts
+  _          -> []
+
+groundings :: TypeRed -> Type -> [Type]
+groundings f t =
+  [ applyRed (\x -> gradePlus x <|> f x) (applySubst s t)
+  | s <- mapM (\v -> [(TyVar v, Atom "P"), (TyVar v, Atom "M")])
+              (nub (gradeVars t)) ]
+
+subsetOf :: TypeRed -> Type -> Type -> Bool
+subsetOf f a b = all (\ga -> any (instanceOf f ga) gbs) (groundings f a)
+  where gbs = groundings f b

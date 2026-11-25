@@ -40,13 +40,13 @@ getSemantics n = sem . (indices !! n) . getList . flip (interpretations @p) 0
 
 -- stanOutput pp   = Stan (fst (runWriter (toStanParams (termOf pp)))) (fst (runWriter (toStanModel (termOf pp))))
 
-deltaRules = probabilities <||> arithmetic @(RatioOfSprays Rational) <||> states <||> disjunctions <||> cleanUp <||> maxes <||> logical <||> ite <||> observations <||> factors <||> masses <||> integration
+deltaRules = probabilities <||> arithmetic @(RatioOfSprays Rational) <||> states <||> disjunctions <||> cleanUp <||> maxes <||> logical <||> ite <||> observations <||> factors <||> masses <||> integration <||> measureTracking <||> normalization tauAdj
   
 s1         = termOf $ getSemantics @Factivity 1 ["jo", "knows", "that", "bo", "is", "a", "linguist"] 
 q1         = termOf $ getSemantics @Factivity 1 ["how", "likely", "that", "bo", "is", "a", "linguist"]
-discourse  = ty tauFact $ assert s1 >>> ask q1
+discourse  = assert s1 >>> ask q1
 
-factivityExample = betaDeltaNormalTyped tauFact deltaRules $ asTyped (normalize . factivityRespond factivityPrior) discourse
+factivityExample = betaDeltaNormalTyped (gradePlus <||> popTy) tauFact deltaRules $ ty tauFact $ (normalize . factivityRespond factivityPrior) discourse
 
 -- factivityResult :: Model
 -- factivityResult = Model [ ("v", "logit_normal(0.0, 1.0)")
@@ -55,18 +55,18 @@ factivityExample = betaDeltaNormalTyped tauFact deltaRules $ asTyped (normalize 
 
 s1'        = termOf $ getSemantics @Adjectives 1 ["jo", "is", "a", "soccer player"] 
 q1'        = termOf $ getSemantics @Adjectives 0 ["how", "tall", "jo", "is"]
-discourse' = ty tauAdj $ assert s1' >>> ask q1'
+discourse' = assert s1' >>> ask q1'
 
--- scaleNormingExample = asTyped tauAdj (betaDeltaNormal deltaRules . adjectivesRespond scaleNormingPrior) discourse'
+scaleNormingExample = betaDeltaNormalTyped (gradePlus <||> popTy) tauAdj deltaRules $ ty tauAdj $ (normalize . adjectivesRespond scaleNormingPrior) discourse'
 
 -- scaleNormingResult :: Model
 -- scaleNormingResult = Model [ ("w", "normal(0.0, 1.0)")
                            -- , ("y", "normal_lpdf(y | w, sigma)") ]
 
 q1''        = termOf $ getSemantics @Adjectives 0 ["how", "likely", "that", "jo", "is", "tall"]
-discourse'' = ty tauAdj $ assert s1' >>> ask q1''
+discourse'' = assert s1' >>> ask q1''
 
-likelihoodExample = betaDeltaNormalTyped tauAdj deltaRules $ asTyped (normalize . adjectivesRespond likelihoodPrior) discourse''
+likelihoodExample = betaDeltaNormalTyped (gradePlus <||> popTy) tauAdj deltaRules $ ty tauAdj $ (normalize . adjectivesRespond likelihoodPrior) discourse''
 
 -- likelihoodResult :: Model
 -- likelihoodResult = Model [ ("v", "normal(0.0, 1.0)")
@@ -153,22 +153,28 @@ lingSig :: Sig
 lingSig = \case
   Left "ling" -> Just (e :→ t)
   _           -> Nothing
-
--- >>> putStrLn $ let Left x = factivityExample in x
--- (λw.λw.(w ∼ (λw.[⟨λv.λx.(≥)(Pr((v ∼ CG(w); [ling(v)(b)])))(v), w⟩])(w); (λv.λu.(u ∼ (λu.[⟨u, u⟩])(u); (λu.λy.[⟨⋄, push_QUD(v)(u)⟩])(π₁(u))(π₂(u))))(π₁(w))(π₂(w))))(π₁(⟨⋄, upd_CG((factor((1.0 / Mass((v ∼ CG(u); (observe(if_then_else(⟨⟨tau_know(v), (∧)(epi(v)(j)(λv.ling(v)(b)))(ling(v)(b))⟩, epi(v)(j)(λv.ling(v)(b))⟩)); [v]))))); (v ∼ CG(u); (observe(if_then_else(⟨⟨tau_know(v), (∧)(epi(v)(j)(λv.ling(v)(b)))(ling(v)(b))⟩, epi(v)(j)(λv.ling(v)(b))⟩)); [v]))))(u)⟩)) lacks at type,
--- while λw.[⟨⋄, push_QUD(λx.λv.(≥)((TrueMass((v ∼ CG(w); [ling(v)(b)])) / Mass((v ∼ CG(w); [ling(v)(b)]))))(x))(w)⟩] : φ → P  (⋄ × Q ι1 r φ)
+   
+-- >>> factivityExample
+-- Right (v ∼ Logit_normal(⟨0.0, 1.0⟩); (w ∼ Logit_normal(⟨0.0, 1.0⟩); (u ∼ Uniform(⟨0.0, 1.0⟩); disj(⟨⟨v, truncate(⟨0.0, 1.0⟩)(Normal(⟨1.0, u⟩))⟩, truncate(⟨0.0, 1.0⟩)(Normal(⟨w, u⟩))⟩)))) : P r
+-- >>> likelihoodExample
+-- Right (w ∼ Normal(⟨0.0, 1.0⟩); (x ∼ Uniform(⟨0.0, 1.0⟩); Normal(⟨Normal_ccdf(⟨0.0, 1.0⟩)(w), x⟩))) : P r
 
 -- >>> ty tau0 ((Lam "v" (Var "v")) @@ Var "v")
 -- (λv.v)(v) : β
 
--- >>> betaDeltaNormalTyped tauFact deltaRules (ty tauFact ((Lam "v" (Var "v")) @@ (Var "w")))
--- Right w : α
+-- >>> betaDeltaNormalTyped tau0 ((ty tauFact ((Lam "v" (Var "v")) @@ (Var "w")))
+-- <interactive>:1129:76: error: [GHC-58481]
+--     parse error (possibly incorrect indentation or mismatched brackets)
 
--- >>> betaDeltaNormalTyped tauFact deltaRules (ty tau0 $ (Lam "v" (Var "v")) @@ Var "v")
+-- >>> ty tau0 $ (Lam "v" (Var "v")) @@ Var "v")
 -- Right v : α
 
--- >>> betaDeltaNormalTyped tau0 deltaRules (ty tau0 $ (Lam "m" (Let "y" (Return m) (Return y))))
--- Right λm.[m] : α → P  α
+-- >>> betaDeltaNormalTyped (const Nothing) tau0 deltaRules (ty tau0 $ (Lam "m" (Let "y" (Return m) (Return y))))
+-- Right λm.[m] : α → P α
+
+-- >>> ty tau0 $ (Lam "m" (Let "y" (Return m) (Return y)))
+-- λm.(y ∼ [m]; [y]) : γ → P γ
+
 
 -- >>> mapM_ (\c -> putStrLn (c ++ " : " ++ show (tauFact (Left c)))) ["factor", "upd_CG", "observe", "if_then_else", "tau_know", "epi", "Mass", "Pr"]
 -- factor : Just r → M  ⋄
@@ -179,3 +185,17 @@ lingSig = \case
 -- epi : Just ι → e → (ω → t) → t
 -- Mass : Just G  α  β → r
 -- Pr : Just P  t → r
+
+-- >>> mapM_ (\c -> putStrLn (c ++ " : " ++ show (tauFact (Left c)))) ["normalize", "Normalize", "observe", "upd_CG", "CG", "if_then_else"]
+-- normalize : Just G α β → P β
+-- Normalize : Nothing
+-- observe : Just t → M ⋄
+-- upd_CG : Just P ι → σ → σ
+-- CG : Just σ → P ι
+-- if_then_else : Just t × α × α → α
+
+-- >>> c = Con . Left
+-- >>> ty tauFact (App (c "normalize") (Return (Var "x")))   -- Nothing
+-- ⌜normalize([x])⌝ is not assigned a type.
+-- >>> ty tauFact (App (c "Normalize") (Return (Var "x")))   -- P γ
+-- Normalize([x]) : P  δ

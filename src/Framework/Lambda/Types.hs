@@ -15,7 +15,9 @@ top level for some limited polymorphism. Constants may also be polymorphic.
 module Framework.Lambda.Types ( arity
                               , asTyped
                               , betaDeltaNormalTyped
+                              , gradePlus
                               , order
+                              , popTy
                               , Sig
                               , ty
                               , tyEq
@@ -30,7 +32,8 @@ module Framework.Lambda.Types ( arity
 import Control.Monad ((<=<))
 import Control.Monad.State    (evalStateT, get, lift, put, StateT)
 import Data.Char              (toLower)
-import Data.List              (nub)
+import Data.Maybe
+import Data.List              (isPrefixOf, nub, partition)
 import Framework.Lambda.Terms
 
 --------------------------------------------------------------------------------
@@ -62,20 +65,11 @@ type TypeRel = Type -> Type -> Bool
 -- | Type-level reductions.
 type TypeRed = Type -> Maybe Type
 
--- | Determine if two types are semantically equivalent, taking type reductions
--- into account.
-tyEq :: TypeRed -> TypeRel
-tyEq f α β = applySubst substα α' == applySubst substβ β'
-  where α', β' :: Type
-        α' = applyRed f α
-        β' = applyRed f β
-
-        applyRed :: TypeRed -> Type -> Type
-        applyRed f ty = case f ty of
-                         Just ty' -> applyRed f ty'
-                         Nothing  -> descend f ty
-
-        descend :: TypeRed -> Type -> Type
+applyRed :: TypeRed -> Type -> Type
+applyRed f ty = case f ty of
+                  Just ty' -> applyRed f ty'
+                  Nothing  -> descend f ty
+  where descend :: TypeRed -> Type -> Type
         descend f = \case
           a@(Atom _)  -> a
           ty1 :→ ty2  -> applyRed f ty1 :→ applyRed f ty2
@@ -85,6 +79,14 @@ tyEq f α β = applySubst substα α' == applySubst substβ β'
           TyCon g tys -> TyCon g (map (applyRed f) tys)
           v@(TyVar _) -> v
 
+-- | Determine if two types are semantically equivalent, taking type reductions
+-- into account.
+tyEq :: TypeRed -> TypeRel
+tyEq f α β = applySubst substα α' == applySubst substβ β'
+  where α', β' :: Type
+        α' = applyRed f α
+        β' = applyRed f β
+        
         substα, substβ :: Constr
         substα = zip (TyVar <$> αVars) (TyVar <$> newVars)
         substβ = zip (TyVar <$> βVars) (TyVar <$> newVars)
@@ -93,6 +95,32 @@ tyEq f α β = applySubst substα α' == applySubst substβ β'
         αVars = getVars α'
         βVars = getVars β'
         newVars = filter (flip notElem $ αVars ++ βVars) tyVars
+
+-- | Add grades.
+gradePlus :: TypeRed
+-- gradePlus = \case
+--   TyCon "+" gs
+--     | Atom "M" `elem` gs || Atom "P" `elem` gs -> Just (foldr pl (Atom "P") gs)
+--     where pl g1 g2 = case (g1, g2) of
+--                        (Atom "P", g2)       -> g2
+--                        (g1      , Atom "P") -> g1
+--                        (Atom "M", _)        -> Atom "M"
+--                        (_,        Atom "M") -> Atom "M"
+--                        (ty1,      ty2)      -> TyCon "+" [ty1, ty2]
+                       
+--   _            -> Nothing
+gradePlus = \case -- Claude-generated.
+  TyCon "+" gs ->
+    let flat (TyCon "+" xs) = concatMap flat xs
+        flat g              = [g]
+        gs' = nub (filter (/= Atom "P") (concatMap flat gs))
+        out | Atom "M" `elem` gs' = Atom "M"
+            | otherwise = case gs' of
+                            []  -> Atom "P"
+                            [g] -> g
+                            _   -> TyCon "+" gs'
+    in if out == TyCon "+" gs then Nothing else Just out
+  _ -> Nothing
 
 -- | Match pop types to cancel out the types they pop.
 popTy :: TypeRed
@@ -110,6 +138,48 @@ popTy = \case
       _                                              -> Nothing
   _                               -> Nothing
 
+popTyConstraints :: Type -> Maybe (Type, Constr)
+popTyConstraints = \case
+  TyCon ('p' : 'o' : 'p' : f) tys
+    | not (null tys) ->
+        cancel f (init tys) (last tys)
+  _ -> Nothing
+  where
+    cancel f args (TyCon g tys)
+      | not (null tys)
+      , f == g
+      , length args == length (init tys) =
+          Just (last tys, zip args (init tys))
+
+      | not (null tys)
+      , f /= g
+      , not ("pop" `isPrefixOf` g) = do
+          (ty, cs) <- cancel f args (last tys)
+          pure (TyCon g (init tys ++ [ty]), cs)
+    cancel f args s@(TyVar _) = Just (TyCon ("pop" ++ f) (args ++ [s]), [])
+    cancel _ _ _ = Nothing
+
+reducePops :: Type -> (Type, Constr)
+reducePops = \case
+  a :→ b -> combine (:→) a b
+  a :× b -> combine (:×) a b
+  G a b  -> combine G a b
+
+  TyCon f tys ->
+    let (tys', css) = unzip (map reducePops tys)
+        ty          = TyCon f tys'
+        cs          = concat css
+    in case popTyConstraints ty of
+         Just (ty', cs') -> (ty', cs ++ cs')
+         Nothing         -> (ty, cs)
+
+  ty -> (ty, [])
+  where
+    combine con a b =
+      let (a', cs1) = reducePops a
+          (b', cs2) = reducePops b
+      in (con a' b', cs1 ++ cs2)
+
 -- | Semantic type equality, taking popable types into account.
 tyEq' :: TypeRel
 tyEq' = tyEq popTy
@@ -124,9 +194,9 @@ instance Show Type where
     a@(_ :→ _) :× b          -> "((" ++ show a ++ ") × " ++ show b ++ ")"
     a :× b@(_ :→ _)          -> "(" ++ show a ++ " × (" ++ show b ++ "))"
     a :× b                   -> show a ++ " × " ++ show b
-    M a                      -> "M " ++ wrap a
-    P a                      -> "P " ++ wrap a
-    G a b                    -> "G " ++ wrap a ++ " " ++ wrap b
+    M a                      -> "M" ++ wrap a
+    P a                      -> "P" ++ wrap a
+    G a b                    -> "G" ++ wrap a ++ wrap b
     TyCon f tys              -> f ++ concatMap wrap tys
     TyVar s                  -> s
     where wrap :: Type -> String
@@ -174,9 +244,34 @@ getVars = nub . getVars'
 -- | Arrive at a most general unifier, or fail if none exists.
 unify :: Constr -> Maybe Constr
 unify cs = do
-  (cs', []) <- pass ([], cs)
-  if cs' == cs then Just cs else unify cs'
+  let ordered = prioritizeConstraints cs
+  (cs', []) <- pass ([], ordered)
+  let ordered' = prioritizeConstraints cs'
+
+  if ordered' /= ordered
+    then unify ordered'
+    else
+      let reqs = nub
+               $ concatMap
+                   (\(x, y) ->
+                      popRequirements x ++ popRequirements y)
+                   ordered'
+
+          extra = sharedPopConstraints reqs
+
+      in if any impossiblePop reqs
+           then Nothing
+           else if not (null extra)
+                  then unify (ordered' ++ extra)
+                  else if any stuckPop ordered'
+                         then Nothing
+                         else Just ordered'
   where
+    stuckPop :: (Type, Type) -> Bool
+    stuckPop (x, y) | x == y = False
+    stuckPop (TyVar _, _)    = False
+    stuckPop (x, y)          = isPopTy x || isPopTy y
+
     -- | Make one pass through the whole list.
     pass :: (Constr, Constr) -> Maybe (Constr, Constr)
     pass = \case
@@ -188,11 +283,24 @@ unify cs = do
     -- | Take one step toward a most general unifier.
     step :: (Constr, Constr) -> (Type, Type) -> Maybe (Constr, Constr)
     step (u1, u2) = \case
-      (x, y)              | x == y     -> Just (u1, u2) -- Get rid of trivial equalities.
+      (x, y) | let (x', cx) = reducePops x
+                     , let (y', cy) = reducePops y
+                             , x' /= x || y' /= y -> Just (u1 ++ cx ++ cy ++ [(x', y')], u2)
+      eq@(x, y) | x == y ->
+                  if null (popRequirements x)
+                  then Just (u1, u2)
+                  else Just (u1 ++ [eq], u2)
+      (x, y) | let x' = norm x, let y' = norm y, x' /= x || y' /= y
+         -> Just (u1 ++ [(x', y')], u2)                     -- reduce first
+      (TyCon "+" ts, Atom "P") -> Just (u1 ++ [(t, Atom "P") | t <- ts], u2)
+      (Atom "P", TyCon "+" ts) -> Just (u1 ++ [(t, Atom "P") | t <- ts], u2)
+      eq@(TyCon "+" _, _)      -> Just (u1 ++ [eq], u2)           -- stuck (e.g. against M): keep
+      eq@(_, TyCon "+" _)      -> Just (u1 ++ [eq], u2)
       (x@(TyVar _), y)    | occurs x y -> Nothing -- Impredicativity; uh oh!
       eq@(x@(TyVar _), y)              -> Just ( map (substEqs x y) u1 ++ [eq]
                                                , map (substEqs x y) u2 ) -- Substitute.
       (x, TyVar y)                     -> Just (u1 ++ [(TyVar y, x)], u2) -- Swap.
+      eq@(x, y) | isPopTy x || isPopTy y -> Just (u1 ++ [eq], u2)
       (Atom _, _)                      -> Nothing -- We've already handled equalities.
       (x :→ y, z :→ w)                 -> Just (u1 ++ [(x, z), (y, w)], u2) -- Break apart arrows.
       (_ :→ _, _)                      -> Nothing -- No mismatches allowed.
@@ -205,6 +313,12 @@ unify cs = do
                            length tys1 ==
                            length tys2 -> Just (u1 ++ zip tys1 tys2, u2) -- Break apart @TyCon@.
       (TyCon _ _, _)                   -> Nothing -- No mismatches allowed.
+
+    isPopTy :: Type -> Bool
+    isPopTy (TyCon ('p' : 'o' : 'p' : _) _) = True
+    isPopTy _                               = False
+
+    norm = applyRed gradePlus
 
     -- | Substitute inside equalities.
     substEqs :: Type -> Type -> (Type, Type) -> (Type, Type)
@@ -243,7 +357,7 @@ computeType tau t = do ty <- collectConstraints tau t
                        -- | Find a most general unifier.
                        subst <- lift (unify cs)
                        -- | Use it to substitute.
-                       pure (applySubst subst ty)
+                       pure (applyRed gradePlus (applySubst subst ty))
   where collectConstraints :: Sig -> Term -> StateT TVC Maybe Type
         collectConstraints tau = \case
           Var v -> do
@@ -338,13 +452,13 @@ computeType tau t = do ty <- collectConstraints tau t
                 i v' | v' /= v = h v'
             put (types, i, cs')
             tType <- collectConstraints tau t
-            (ty':p':es', j, cs'') <- get
-            subst <- lift (unify cs'')
-            let tType' = applySubst subst tType
-                uType' = applySubst subst uType
-            put (es', j, cs'' ++ [ checkType p' tType' newTy
-                                  , checkType p' uType' (TyVar ty') ])
-            pure (joinType p' uType' tType')
+            (g1:g2:b:rest, j, cs'') <- get
+            put (rest, j, cs'' ++
+                  [ (tType, G (TyVar g1) newTy)
+                  , (uType, G (TyVar g2) (TyVar b))
+                  ])
+
+            pure (G (TyCon "+" [TyVar g1, TyVar g2]) (TyVar b))
               where checkType :: String -> Type -> Type -> (Type, Type)
                     checkType _  ty1@(G a _) ty2 = (ty1, G a ty2)
                     checkType p' ty1         ty2 = (ty1, G (TyVar p') ty2)
@@ -393,6 +507,7 @@ applySubst s = \case
            lookUp v1 ((TyVar v2, t) : s') = if   v2 == v1
                                             then t
                                             else lookUp v1 s'
+           lookUp v (_ : s')              = lookUp v s'
 
 -- | Typed terms (where not every term has a type).
 data Typed = Typed { termOf :: Term, typeOf :: Maybe Type } deriving (Eq)
@@ -428,8 +543,8 @@ guardEither :: Bool -> a -> Either a ()
 guardEither b a = if b then pure () else Left a
 
 -- | Typed normalization.
-betaDeltaNormalTyped :: Sig -> DeltaRule -> Typed -> Either TypeError Typed
-betaDeltaNormalTyped tau delta = continue <=< \case
+betaDeltaNormalTyped :: TypeRed -> Sig -> DeltaRule -> Typed -> Either TypeError Typed
+betaDeltaNormalTyped red tau delta = continue <=< \case
   v@(Typed (Var _) _)         -> pure v
   c@(Typed (Con _) _)         -> pure c
   input@(Typed (Lam v t) _)   -> do
@@ -510,23 +625,126 @@ betaDeltaNormalTyped tau delta = continue <=< \case
                        Nothing -> pure t
 
         bdnd :: Typed -> Either TypeError Typed
-        bdnd = betaDeltaNormalTyped tau delta
+        bdnd = betaDeltaNormalTyped red tau delta
 
         delta' :: Typed -> Maybe Typed
-        delta' (Typed t ty) = fmap (flip Typed ty) (delta t)
-  
+        delta' (Typed t _) = ty tau <$> delta t
+        
         check :: Typed -> Typed -> Either TypeError ()
         check (Typed t ty1) (Typed u ty2) =
           case (ty1, ty2) of
             (Nothing, Nothing)     -> pure ()
             (Nothing, Just ty2') -> Left (
-              show t ++ " lacks at type,\nwhile " ++ show u ++ " : " ++ show ty2'
+              show t ++ " lacks a type,\nwhile " ++ show u ++ " : " ++ show ty2'
               )
             (Just ty1', Nothing)   -> Left (
-              show u ++ " lacks at type,\nwhile " ++ show t ++ " : " ++ show ty1'
+              show u ++ " lacks a type,\nwhile " ++ show t ++ " : " ++ show ty1'
               )
-            (Just ty1', Just ty2') -> guardEither (tyEq popTy ty1' ty2') (
+            (Just ty1', Just ty2') -> guardEither (instanceOf red ty1' ty2') (
               "Evaluation error: " ++ show t ++ " : " ++ show ty1 ++
-              ",\nwhile" ++ show u ++ " : " ++ show ty2
+              ",\nwhile " ++ show u ++ " : " ++ show ty2
               )
 
+-- | Replace type variables by rigid atoms (names can't clash with real atoms).
+skolem :: Type -> Type
+skolem = \case
+  TyVar v     -> Atom ('\'' : v)
+  a :→ b      -> skolem a :→ skolem b
+  a :× b      -> skolem a :× skolem b
+  G f a       -> G (skolem f) (skolem a)      -- or M/P, whichever constructors you have
+  TyCon g tys -> TyCon g (map skolem tys)
+  t           -> t
+
+structuralInstanceOf :: TypeRel
+structuralInstanceOf a b = isJust (match [] b a)
+  where
+    match :: Constr -> Type -> Type -> Maybe Constr
+    match cs v@(TyVar _) ty =
+      case lookup v cs of
+        Nothing  -> Just ((v, ty) : cs)
+        Just ty'
+          | ty' == ty -> Just cs
+          | otherwise -> Nothing
+
+    match cs (a :→ b) (c :→ d) =
+      matchMany cs [(a, c), (b, d)]
+
+    match cs (a :× b) (c :× d) =
+      matchMany cs [(a, c), (b, d)]
+
+    match cs (G a b) (G c d) =
+      matchMany cs [(a, c), (b, d)]
+
+    match cs (TyCon f xs) (TyCon g ys)
+      | f == g && length xs == length ys =
+          matchMany cs (zip xs ys)
+
+    match cs a b
+      | a == b    = Just cs
+      | otherwise = Nothing
+
+    matchMany :: Constr -> Constr -> Maybe Constr
+    matchMany cs [] = Just cs
+    matchMany cs ((a, b) : rest) = do
+      cs' <- match cs a b
+      matchMany cs' rest
+
+-- | @instanceOf f a b@: @a@ is a substitution instance of @b@.
+instanceOf :: TypeRed -> TypeRel
+instanceOf f a b =
+  structuralInstanceOf a' b' ||
+  isJust (unify [(b', skolem a')])
+  where
+    a' = applyRed f a
+    b' = applyRed f b
+
+
+type PopRequirement = (String, [Type], Type)
+
+popRequirements :: Type -> [PopRequirement]
+popRequirements = \case
+  a :→ b -> popRequirements a ++ popRequirements b
+  a :× b -> popRequirements a ++ popRequirements b
+  G a b  -> popRequirements a ++ popRequirements b
+
+  TyCon ('p' : 'o' : 'p' : f) tys
+    | not (null tys) ->
+        (f, init tys, last tys) :
+        concatMap popRequirements tys
+
+  TyCon _ tys ->
+    concatMap popRequirements tys
+
+  _ -> []
+
+sharedPopConstraints :: [PopRequirement] -> Constr
+sharedPopConstraints reqs = nub
+  [ (a, b)
+  | (f, as, s) <- reqs
+  , (g, bs, t) <- reqs
+  , f == g
+  , s == t
+  , length as == length bs
+  , (a, b) <- zip as bs
+  , a /= b
+  ]
+
+impossiblePop :: PopRequirement -> Bool
+impossiblePop (f, _, s) = go s
+  where
+    go (Atom "S") = True
+
+    go (TyCon g tys)
+      | f == g = False
+      | not ("pop" `isPrefixOf` g)
+      , not (null tys) = go (last tys)
+
+    go _ = False
+
+prioritizeConstraints :: Constr -> Constr
+prioritizeConstraints cs = ordinary ++ deferred
+  where
+    (ordinary, deferred) = partition noPops cs
+    noPops (x, y) =
+      null (popRequirements x) &&
+      null (popRequirements y)

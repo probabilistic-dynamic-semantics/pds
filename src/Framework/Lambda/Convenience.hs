@@ -25,6 +25,7 @@ import Framework.Lambda.Types
 α, β, ι, κ, σ, e, t, r :: Type
 α = TyVar "α"
 β = TyVar "β"
+γ = TyVar "γ"
 ι = TyVar "ι"
 ω = TyVar "ω"
 κ = TyVar "κ"
@@ -66,12 +67,13 @@ pattern Phil i      = SCon "phil" `App` i
 pattern Height i    = SCon "height" `App` i
 pattern DTall s     = SCon "d_tall" `App` s
 pattern SocPla i    = SCon "soc_pla" `App` i
-pattern Pr t        = SCon "Pr" `App` t
+pattern Pr t        = SCon "pr" `App` t
 pattern Prop1 i     = SCon "prop1" `App` i
 pattern PopQUD s    = Pop "QUD" s
-pattern Mass t      = SCon "Mass" `App` t
-pattern TrueMass t  = SCon "TrueMass" `App` t
+pattern Mass t      = SCon "mass" `App` t
+pattern TrueMass t  = SCon "true_mass" `App` t
 pattern Normalize t = SCon "normalize" `App` t
+pattern AsMeasure t = SCon "as_measure" `App` t
 
 pattern Add, And, Eq, GE, Mult, Normal, Or, Uniform, UpdEpi, UpdCG, UpdHeight, UpdDTall, UpdSocPla, UpdProp1, PushQUD, Integrate :: Term -> Term -> Term
 pattern Add x y         = SCon "add" `App` (Pair x y)
@@ -94,12 +96,12 @@ pattern UpdDTall d s    = SCon "upd_d_tall" `App` d `App` s
 pattern UpdSocPla p i   = SCon "upd_soc_pla" `App` p `App` i
 pattern UpdProp1 b i    = SCon "upd_prop1" `App` b `App` i
 pattern PushQUD q s     = SCon "push_QUD" `App` q ` App` s
-pattern Integrate t u   = SCon "Integrate" `App` (t `Pair` u)
+pattern Integrate t u   = SCon "integrate" `App` (t `Pair` u)
 
 pattern Disj, ITE, Truncate :: Term -> Term -> Term -> Term
 pattern Disj x m n      = SCon "disj" `App` (Pair (Pair x m) n)
 pattern ITE p x y       = SCon "if_then_else" `App` (Pair (Pair p x) y)
-pattern Truncate m x y  = SCon "Truncate" `App` (Pair x y) `App` m
+pattern Truncate m x y  = SCon "truncate" `App` (Pair x y) `App` m
 pattern NormalCDF x y z = SCon "Normal_cdf" `App` (Pair x y) `App` z
 pattern NormalCCDF x y z = SCon "Normal_ccdf" `App` (Pair x y) `App` z
 
@@ -149,7 +151,7 @@ prop2 = sCon "prop2"
 getPP = lam s (Return (s & s))
 
 epi, cg, normalL, max', purePP, putPP, pr :: Term -> Term
-normalize t    = factor (1 / Mass t) t
+normalize t    = Normalize t
 assert φ       = φ >>>= lam p (getPP >>>= lam s ((purePP (cg s)) >>>= lam c (putPP (upd_CG (normalize (let' i c (observe (p @@ i) (Return i)))) s))))
 ask κ          = κ >>>= Lam "q" (getPP >>>= Lam "s" ((putPP (push_QUD (Var "q") (Var "s")))))
 epi i          = sCon "epi" @@ i
@@ -240,15 +242,19 @@ cons = \case
   Let v t u -> cons t ++ cons u
   Return t  -> cons t
 
--- | True of probabilistic programs that only sample, i.e., do not perform
--- inference.
-sampleOnly :: Term -> Bool
-sampleOnly = \case
+-- | True of probabilistic programs encoding probability distributions.
+isDistr :: Term -> Bool
+isDistr = \case
+  Return _        -> True
   Bern _          -> True
   Normal _ _      -> True
   LogitNormal _ _ -> True
   Truncate _ _ _  -> True
   Uniform _ _     -> True
+  Normalize _     -> True
+  AsMeasure d     -> isDistr d
+  Let _ m k       -> isDistr m && isDistr k
+  Disj _ m n      -> isDistr m && isDistr n
   _               -> False
 
 mean :: Term -> Term
@@ -266,3 +272,10 @@ f <||> g = \x -> f x <|> g x
 overwrite :: [String] -> Term -> Term -> Term
 overwrite []       _ j = j
 overwrite (c : cs) i j = Upd c (LkUp c i) (overwrite cs i j)
+
+
+-- | Adding types in the graded monad over measures.
+addType :: Type -> Type -> Type
+addType (Atom "P") ty2 = ty2
+addType (Atom "M") _   = Atom "m"
+addType (TyVar _)  ty2 = ty2

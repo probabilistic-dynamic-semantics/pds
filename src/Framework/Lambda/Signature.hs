@@ -77,18 +77,22 @@ tauProbProg = \case
   Left "Beta"         -> Just (r :× r :→ P r)
   Left "Normal"       -> Just (r :× r :→ P r)
   Left "Normal_cdf"   -> Just (r :× r :→ r :→ r)
+  Left "Normal_ccdf"  -> Just (r :× r :→ r :→ r)
   Left "Logit_normal" -> Just (r :× r :→ P r)
   Left "Uniform"      -> Just (r :× r :→ P r)
-  Left "disj"         -> Just (r :× P α :× P α :→ P α)
-  Left "factor"       -> Just (r :→ P Unit)
-  Left "observe"      -> Just (t :→ P Unit)
-  Left "Truncate"     -> Just (r :× r :→ P r :→ P r)
-  Left "#"            -> Just (P α) -- The undefined distribution.
+  Left "disj"         -> Just (r :× G α γ :× G β γ :→ G (TyCon "+" [α, β]) γ)
+  Left "factor"       -> Just (r :→ M Unit)
+  Left "observe"      -> Just (t :→ M Unit)
+  Left "truncate"     -> Just (r :× r :→ P r :→ P r)
+  Left "#"            -> Just (M α) -- The undefined distribution.
   Left "𝟙"            -> Just (t :→ r)
   Left "𝔼"            -> Just ((α :→ r) :→ P α :→ r)
-  Left "Pr"           -> Just (P t :→ r)
-  Left "Mass"         -> Just (P t :→ r)
-  Left "TrueMass"     -> Just (P t :→ r)
+  Left "pr"           -> Just (P t :→ r)
+  Left "mass"         -> Just (G α β :→ r)
+  Left "true_mass"     -> Just (G α β :→ r)
+  Left "integrate"    -> Just (P α :× (α :→ r) :→ r)
+  Left "normalize"    -> Just (G α β :→ P β)
+  Left "as_measure"   -> Just (G α β :→ M β)
   _                   -> Nothing
 
 -- | Real numbers.

@@ -17,11 +17,13 @@ feature constants.
 
 module Framework.Lambda.Delta where
 
+import Control.Monad (guard)
 import Data.List
 import Data.Ratio
 import Framework.Lambda.Convenience
 import Framework.Lambda.Delta.Arithmetic
 import Framework.Lambda.Terms
+import Framework.Lambda.Types
 
 --------------------------------------------------------------------------------
 -- * Delta rules
@@ -32,12 +34,13 @@ import Framework.Lambda.Terms
 arithmetic :: forall simplifier . Arithmetic simplifier => DeltaRule
 arithmetic t = do x <- toSimplifier @simplifier t
                   result <- fromSimplifier @simplifier t x
-                  if result == t then Nothing else Just result
+                  guard (result /= t)
+                  pure result
 
 cleanUp :: DeltaRule
 cleanUp = \case
-  Let v m k | sampleOnly m && v `notElem` freeVars k -> Just k
-  _                                                  -> Nothing
+  Let v m k | isDistr m && v `notElem` freeVars k -> Just k
+  _                                               -> Nothing
 
 -- | Marginalizes out certain distributions; some other stuff.
 disjunctions :: DeltaRule
@@ -79,6 +82,16 @@ indicator = \case
   Indi Fa -> Just 0
   _       -> Nothing
 
+-- | Compute integrals.
+integration :: DeltaRule
+integration = \case
+  Integrate t (Lam _ x@(DCon _)) | isDistr t -> Just x
+  Integrate t (Lam v (Var v'))   | v' == v   -> case t of
+                                                  LogitNormal 0 1 -> Just (DCon 0.5)
+                                                  Normal x _      -> Just x
+                                                  _               -> Nothing
+  _                                          -> Nothing
+
 -- | Computes /if then else/.
 ite :: DeltaRule
 ite = \case
@@ -109,7 +122,7 @@ maxes = \case
 -- probability distribution.
 observations :: DeltaRule
 observations = \case
-  Let v (Observe Tr) k -> Just (subst v TT k)
+  Let v (Observe Tr) k -> Just (AsMeasure (subst v TT k))
   Let _ (Observe Fa) _ -> Just Undefined
   _                    -> Nothing
 
@@ -122,19 +135,42 @@ probabilities = \case
 -- | Compute masses.
 masses :: DeltaRule
 masses = \case
-  Mass (Return _)               -> Just 1
+  Mass (Return _)                  -> Just 1
   Mass (Let v (Factor (Div (DCon 1) (Mass t))) t')
     | t' == t
-    , v `notElem` freeVars t'   -> Just 1
-  Mass (Let v (Factor x) t)     -> Just (x * Mass (subst v TT t))
-  Mass (Disj x t u)             -> Just (x * Mass t + (1 - x) * Mass u)
-  Mass Undefined                -> Just 0
-  TrueMass (Return Tr)          -> Just 1
-  TrueMass (Return Fa)          -> Just 0
-  TrueMass (Let v (Factor x) t) -> Just (x * TrueMass (subst v TT t))
-  TrueMass (Disj x t u)         -> Just (x * TrueMass t + (1 - x) * TrueMass u)
-  TrueMass Undefined            -> Just 0
-  _                             -> Nothing
+    , v `notElem` freeVars t'      -> Just 1
+  Mass (Let v t u) | isDistr t     -> Just (Integrate t (Lam v (Mass u)))
+  Mass t           | isDistr t     -> Just 1
+  Mass (Let v (Factor x) t)        -> Just (x * Mass (subst v TT t))
+  Mass (Disj x t u)                -> Just (x * Mass t + (1 - x) * Mass u)
+  Mass Undefined                   -> Just 0
+  Mass (AsMeasure m)               -> Just (Mass m)
+  Mass (Normalize _)               -> Just 1
+  Mass (Let v m (AsMeasure k))     -> Just (Mass (Let v m k))
+  TrueMass (Return Tr)             -> Just 1
+  TrueMass (Return Fa)             -> Just 0
+  TrueMass (Let v (Factor x) t)    -> Just (x * TrueMass (subst v TT t))
+  TrueMass (Disj x t u)            -> Just (x * TrueMass t + (1 - x) * TrueMass u)
+  TrueMass (
+    Let v (Normal x y) (
+        Return (t `GE` Var v')
+        )
+    ) | v' == v                    -> Just (NormalCDF x y t)
+  TrueMass (
+    Let v (Normal x y) (
+        Return (Var v' `GE` t)
+        )
+    ) | v' == v                    -> Just (NormalCCDF x y t)
+
+  TrueMass Undefined               -> Just 0
+  TrueMass (AsMeasure m)           -> Just (TrueMass m)
+  TrueMass (Normalize m)           -> Just (TrueMass m / Mass m)
+
+  Mass (Let v (Normalize m) k)     -> Just (Mass (Let v m k) / Mass m)
+
+  TrueMass (Let v (Normalize m) k) -> Just (TrueMass (Let v m k) / Mass m)
+  TrueMass (Let v m (AsMeasure k)) -> Just (TrueMass (Let v m k))
+  _                                -> Nothing
 
 -- | Computes functions on indices and states. These include reading and writing
 -- to locations of fixed type, as well as pushing to and popping from stacks,
@@ -161,5 +197,22 @@ states = \case
 factors :: DeltaRule
 factors = \case
   Let v (Factor x) (Let v' (Factor y) t) -> Just (Let v (Factor (x * subst v TT y)) (subst v' TT t))
+  Let v t (Let v' (Factor x) u)
+    | v `notElem` freeVars x             -> Just (Let v' (Factor x) (Let v t u))
   Let v (Factor One) t                   -> Just (subst v TT t)
+  Let v t (Let v' (Factor (Var v'')) u)
+    | v'' == v && v `notElem` freeVars u -> Just (Let v' (Factor (mean t)) u)
+  Normalize (Let v (Factor (DCon c)) k)
+    | c > 0 -> Just (Normalize (subst v TT k))
   _                                      -> Nothing
+
+measureTracking :: DeltaRule
+measureTracking = \case
+  Let v m (AsMeasure k)   -> Just (AsMeasure (Let v m k))
+  Normalize (AsMeasure m) -> Just (Normalize m)
+  _                       -> Nothing
+
+normalization :: Sig -> DeltaRule
+normalization tau = \case
+  Normalize m | Just (P _) <- typeOf (ty tau m) -> Just m
+  _                                             -> Nothing

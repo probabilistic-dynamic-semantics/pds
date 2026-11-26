@@ -416,7 +416,9 @@ computeType tau t = do ty <- collectConstraints tau t
                                        []
             subst <- lift (unify conCs) 
             let QualifiedType cConstr cType' = asQT subst cType
-            put (rest, f, cs ++ cConstr)
+                popCs = [ (p, p) | (f, args, s) <- popRequirements cType'
+                                 , let p = TyCon ("pop" ++ f) (args ++ [s]) ]
+            put (rest, f, cs ++ cConstr ++ popCs)
             pure cType'
           App t u -> do
             -- | Process the argument type; process the function type; then

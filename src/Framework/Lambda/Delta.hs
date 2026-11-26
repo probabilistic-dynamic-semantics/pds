@@ -214,5 +214,5 @@ measureTracking = \case
 
 normalization :: Sig -> DeltaRule
 normalization tau = \case
-  Normalize m | Just (P _) <- typeOf (ty tau m) -> Just m
-  _                                             -> Nothing
+  Normalize m | Just (QualifiedType _ (P _)) <- typeOf (ty tau m) -> Just m
+  _                                                               -> Nothing

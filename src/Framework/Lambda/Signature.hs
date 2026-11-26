@@ -41,70 +41,70 @@ tau0 = tauArithmetic  <||>
 -- | Some arithmetic operators.
 tauArithmetic :: Sig
 tauArithmetic = \case
-  Left "mult" -> Just (r :× r :→ r)
-  Left "div"  -> Just (r :× r :→ r)
-  Left "add"  -> Just (r :× r :→ r)
-  Left "max"  -> Just ((r :→ t) :→ r)
-  Left "neg"  -> Just (r :→ r)
-  Left "(≥)"  -> Just (r :→ r :→ t)
+  Left "mult" -> mkTy (r :× r :→ r)
+  Left "div"  -> mkTy (r :× r :→ r)
+  Left "add"  -> mkTy (r :× r :→ r)
+  Left "max"  -> mkTy ((r :→ t) :→ r)
+  Left "neg"  -> mkTy (r :→ r)
+  Left "(≥)"  -> mkTy (r :→ r :→ t)
   _           -> Nothing
 
 -- | Initial indices.
 tauIndicesInit :: Sig
 tauIndicesInit = \case
-  Left "@" -> Just σ -- Blank starting world.
+  Left "@" -> mkTy σ -- Blank starting world.
   _        -> Nothing
 
 -- | Logical constants and operators defind thereon.
 tauLogical :: Sig
 tauLogical = \case
-  Left "∀"            -> Just ((α :→ t) :→ t)
-  Left "∃"            -> Just ((α :→ t) :→ t)
-  Left "(∧)"          -> Just (t :→ t :→ t)
-  Left "(∨)"          -> Just (t :→ t :→ t)
-  Left "(⇒)"          -> Just (t :→ t :→ t)
-  Left "¬"            -> Just (t :→ t)
-  Left "T"            -> Just t
-  Left "F"            -> Just t
-  Left "if_then_else" -> Just (t :× α :× α :→ α)
-  Left "(=)"          -> Just (α :× α :→ t)
+  Left "∀"            -> mkTy ((α :→ t) :→ t)
+  Left "∃"            -> mkTy ((α :→ t) :→ t)
+  Left "(∧)"          -> mkTy (t :→ t :→ t)
+  Left "(∨)"          -> mkTy (t :→ t :→ t)
+  Left "(⇒)"          -> mkTy (t :→ t :→ t)
+  Left "¬"            -> mkTy (t :→ t)
+  Left "T"            -> mkTy t
+  Left "F"            -> mkTy t
+  Left "if_then_else" -> mkTy (t :× α :× α :→ α)
+  Left "(=)"          -> mkTy (α :× α :→ t)
   _                   -> Nothing
 
 -- | Various useful probability distributions and operators defined thereon.
 tauProbProg :: Sig
 tauProbProg = \case
-  Left "Bernoulli"    -> Just (r :→ P t)
-  Left "Beta"         -> Just (r :× r :→ P r)
-  Left "Normal"       -> Just (r :× r :→ P r)
-  Left "Normal_cdf"   -> Just (r :× r :→ r :→ r)
-  Left "Normal_ccdf"  -> Just (r :× r :→ r :→ r)
-  Left "Logit_normal" -> Just (r :× r :→ P r)
-  Left "Uniform"      -> Just (r :× r :→ P r)
-  Left "disj"         -> Just (r :× G α γ :× G β γ :→ G (TyCon "+" [α, β]) γ)
-  Left "factor"       -> Just (r :→ M Unit)
-  Left "observe"      -> Just (t :→ M Unit)
-  Left "truncate"     -> Just (r :× r :→ P r :→ P r)
-  Left "#"            -> Just (M α) -- The undefined distribution.
-  Left "𝟙"            -> Just (t :→ r)
-  Left "𝔼"            -> Just ((α :→ r) :→ P α :→ r)
-  Left "pr"           -> Just (P t :→ r)
-  Left "mass"         -> Just (G α β :→ r)
-  Left "true_mass"     -> Just (G α β :→ r)
-  Left "integrate"    -> Just (P α :× (α :→ r) :→ r)
-  Left "normalize"    -> Just (G α β :→ P β)
-  Left "as_measure"   -> Just (G α β :→ M β)
+  Left "Bernoulli"    -> mkTy (r :→ P t)
+  Left "Beta"         -> mkTy (r :× r :→ P r)
+  Left "Normal"       -> mkTy (r :× r :→ P r)
+  Left "Normal_cdf"   -> mkTy (r :× r :→ r :→ r)
+  Left "Normal_ccdf"  -> mkTy (r :× r :→ r :→ r)
+  Left "Logit_normal" -> mkTy (r :× r :→ P r)
+  Left "Uniform"      -> mkTy (r :× r :→ P r)
+  Left "disj"         -> mkTy (r :× G α γ :× G β γ :→ G (TyCon "+" [α, β]) γ)
+  Left "factor"       -> mkTy (r :→ M Unit)
+  Left "observe"      -> mkTy (t :→ M Unit)
+  Left "truncate"     -> mkTy (r :× r :→ P r :→ P r)
+  Left "#"            -> mkTy (M α) -- The undefined distribution.
+  Left "𝟙"            -> mkTy (t :→ r)
+  Left "𝔼"            -> mkTy ((α :→ r) :→ P α :→ r)
+  Left "pr"           -> mkTy (P t :→ r)
+  Left "mass"         -> mkTy (G α β :→ r)
+  Left "true_mass"     -> mkTy (G α β :→ r)
+  Left "integrate"    -> mkTy (P α :× (α :→ r) :→ r)
+  Left "normalize"    -> mkTy (G α β :→ P β)
+  Left "as_measure"   -> mkTy (G α β :→ M β)
   _                   -> Nothing
 
 -- | Real numbers.
 tauReals :: Sig
 tauReals = \case
-  Right _ -> Just r
+  Right _ -> mkTy r
   _       -> Nothing
 
 -- | Initial states.
 tauStatesInit :: Sig
 tauStatesInit = \case
-  Left "ϵ" -> Just σ -- Blank starting state.
+  Left "ϵ" -> mkTy σ -- Blank starting state.
   _        -> Nothing 
 
 
@@ -116,8 +116,8 @@ mkStateSig _   []               = const Nothing
 mkStateSig sTy ((c, ty) : ctys) = ctySig <||> mkStateSig sTy ctys
   where ctySig :: Sig
         ctySig = \case
-          Left c' | c' == c           -> Just (sTy :→ ty)
-          Left c' | c' == "upd_" ++ c -> Just (ty :→ sTy :→ sTy)
+          Left c' | c' == c           -> mkTy (sTy :→ ty)
+          Left c' | c' == "upd_" ++ c -> mkTy (ty :→ sTy :→ sTy)
           _                           -> Nothing
 
 -- | Make signatures for pushing to and popping from stacks.
@@ -126,6 +126,6 @@ mkStackSig _   _ _ []               = const Nothing
 mkStackSig sTy f g ((c, ty) : ctys) = ctySig <||> mkStackSig sTy f g ctys
   where ctySig :: Sig
         ctySig = \case
-          Left c' | c' == "push_" ++ c -> Just (ty :→ sTy :→ f sTy)
-          Left c' | c' == "pop_"  ++ c -> Just (sTy :→ ty :× g sTy)
+          Left c' | c' == "push_" ++ c -> mkTy (ty :→ sTy :→ f sTy)
+          Left c' | c' == "pop_"  ++ c -> mkTy (sTy :→ ty :× g sTy)
           _                            -> Nothing

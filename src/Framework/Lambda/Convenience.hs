@@ -90,6 +90,7 @@ pattern LogitNormal x y = SCon "Logit_normal" `App` (Pair x y)
 pattern Uniform x y     = SCon "Uniform" `App` (Pair x y)
 pattern UpdEpi acc i    = SCon "upd_epi" `App` acc `App` i
 pattern UpdCG cg s      = SCon "upd_CG" `App` cg `App` s
+pattern UpdBEL be s     = SCon "upd_BEL" `App` be `App` s
 pattern UpdLing p i     = SCon "upd_ling" `App` p `App` i
 pattern UpdTauKnow b s  = SCon "upd_tau_know" `App` b `App` s
 pattern UpdHeight p i   = SCon "upd_height" `App` p `App` i
@@ -98,6 +99,7 @@ pattern UpdSocPla p i   = SCon "upd_soc_pla" `App` p `App` i
 pattern UpdProp1 b i    = SCon "upd_prop1" `App` b `App` i
 pattern PushQUD q s     = SCon "push_QUD" `App` q ` App` s
 pattern Integrate t u   = SCon "integrate" `App` (t `Pair` u)
+pattern Bel s x         = SCon "BEL" `App` s `App` x
 
 pattern Disj, ITE, Truncate :: Term -> Term -> Term -> Term
 pattern Disj x m n      = SCon "disj" `App` (Pair (Pair x m) n)
@@ -158,6 +160,7 @@ ask κ          = κ >>>= Lam "q" (getPP >>>= Lam "s" ((putPP (push_QUD (Var "q"
 epi i          = sCon "epi" @@ i
 cg s           = sCon "CG" @@ s
 upd_CG cg s    = sCon "upd_CG" @@ cg @@ s
+upd_BEL be s   = sCon "upd_BEL" @@ be @@ s
 pop_qud s      = sCon "pop_QUD" @@ s
 push_QUD q s   = sCon "push_QUD" @@ q @@ s
 ling i         = sCon "ling" @@ i
@@ -176,7 +179,7 @@ set  c = lam x (lam s (Return (TT & Upd c x s)))
 pop  c = lam s (Return (Pop c s))
 push c = lam x (lam s (Return (TT & Push c x s)))
 
-(>>>=), (<**>), (<$$>), lam, normal, factor, observe:: Term -> Term -> Term
+(>>>=), (<**>), (<$$>), lam, normal, factor, observe, bel, propose :: Term -> Term -> Term
 t >>>= u    = lam fr (let' e (t @@ fr) (u @@ Pi1 e @@ Pi2 e))
   where fr:e:sh = map Var $ fresh [t, u]
 m >>> n     = m >>>= (lam fr n)
@@ -188,12 +191,20 @@ lam (Var v) = Lam v
 normal x y  = sCon "Normal" @@ (x & y)
 factor x y  = Let "_" (sCon "factor" @@ x) y
 observe x y = Let "_" (sCon "observe" @@ x) y
+bel         = Bel
+propose x φ = lam s (φ >>>= lam p (let' i (bel s x) (observe (p @@ i) (Return s))))
+  where s:i:_ = map Var $ fresh [x, φ]
 
 let', respond :: Term -> Term -> Term -> Term
 let' (Var v)   = Let v
 respond f bg m = let' s bg m'
   where m'     = let' _s' (m @@ s) (let' i (cg (Pi2 _s')) (f @@ (max' (lam x (Pi1 (pop_qud (Pi2 _s')) @@ x @@ i)))))
         s:_s':i:x:_ = map Var $ fresh [bg, m]
+
+respond2 :: Term -> Term -> Term -> Term -> Term
+respond2 f x bg m = let' s bg m'
+  where m'     = let' _s' (m @@ s) (let' i (bel (Pi2 _s') x) (f @@ (max' (lam x (Pi1 (pop_qud (Pi2 _s')) @@ x @@ i)))))
+        s:_s':i:x:_ = map Var $ fresh [x, bg, m]
 
 -- | 'Num' instance for 'Term', just as a notational convenience.
 instance Num Term where
@@ -280,3 +291,6 @@ addType :: Type -> Type -> Type
 addType (Atom "P") ty2 = ty2
 addType (Atom "M") _   = Atom "m"
 addType (TyVar _)  ty2 = ty2
+
+mkTy :: Type -> Maybe QualifiedType
+mkTy ty0 = Just (QualifiedType empty ty0)

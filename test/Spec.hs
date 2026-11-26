@@ -148,3 +148,7 @@ lingSig :: Sig
 lingSig = \case
   Left "ling" -> mkTy (e :→ t)
   _           -> Nothing
+
+
+-- >>> ty tauFact (Con (Left "pop_QUD"))
+-- pop_QUD : (popQ δ γ β ~ popQ δ γ β) ⟹ β → ((γ → δ → t) × popQ δ γ β)

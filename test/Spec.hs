@@ -92,8 +92,8 @@ ex = view "CG" >>>= lam c (
 joSig :: Sig
 joSig = \x ->
   case x of
-    Left "jo"      -> Just e
-    Left "animate" -> Just (ι :→ e :→ t)
+    Left "jo"      -> mkTy e
+    Left "animate" -> mkTy (ι :→ e :→ t)
 
 -- >>> ty (tauAdj <||> joLex) ex
 -- λu.(v ∼ (λs.[⟨CG(s), s⟩])(u); (λc.λu.(v ∼ (λx.λs.[⟨⋄, upd_CG(x)(s)⟩])((i ∼ c; (observe(animate(i)(jo)); [i])))(u); (λu.λu.[⟨jo, u⟩])(π₁(v))(π₂(v))))(π₁(v))(π₂(v))) : ν → P (e × ν)
@@ -141,73 +141,10 @@ ex1 f = SCon "∃" @@ f
 --   _
 --     -> []
 
--- >>> :t ite1
--- <interactive>:1:1-4: error: [GHC-88464]
---     Variable not in scope: ite1
---     Suggested fix: Perhaps use ‘ite’ (imported from Framework.Lambda)
-
 ling1 :: Term
 ling1 = Con (Left "ling")
 
 lingSig :: Sig
 lingSig = \case
-  Left "ling" -> Just (e :→ t)
+  Left "ling" -> mkTy (e :→ t)
   _           -> Nothing
-   
--- >>> factivityExample
--- Right (v ∼ Logit_normal(⟨0.0, 1.0⟩); (w ∼ Logit_normal(⟨0.0, 1.0⟩); (u ∼ Uniform(⟨0.0, 1.0⟩); disj(⟨⟨v, truncate(⟨0.0, 1.0⟩)(Normal(⟨1.0, u⟩))⟩, truncate(⟨0.0, 1.0⟩)(Normal(⟨w, u⟩))⟩)))) : P r
-
--- >>> likelihoodExample
--- Right (w ∼ Normal(⟨0.0, 1.0⟩); (x ∼ Uniform(⟨0.0, 1.0⟩); Normal(⟨Normal_ccdf(⟨0.0, 1.0⟩)(w), x⟩))) : P r
-
--- >>> scaleNormingExample
--- Right (w ∼ Normal(⟨0.0, 1.0⟩); (x ∼ Uniform(⟨0.0, 1.0⟩); Normal(⟨w, x⟩))) : P r
-
-
-
--- >>> ty tau0 ((Lam "v" (Var "v")) @@ Var "v")
--- (λv.v)(v) : β
-
--- >>> betaDeltaNormalTyped (const Nothing) tau0 (const Nothing) ((ty tauFact ((Lam "v" (Var "v")) @@ (Var "w"))))
--- Right w : α
-
--- >>> ty tau0 $ (Lam "v" (Var "v")) @@ Var "v")
--- Right v : α
-
--- >>> betaDeltaNormalTyped (const Nothing) tau0 deltaRules (ty tau0 $ (Lam "m" (Let "y" (Return m) (Return y))))
--- Right λm.[m] : α → P α
-
--- >>> ty tau0 $ (Lam "m" (Let "y" (Return m) (Return y)))
--- λm.(y ∼ [m]; [y]) : γ → P γ
-
-
--- >>> mapM_ (\c -> putStrLn (c ++ " : " ++ show (tauFact (Left c)))) ["factor", "upd_CG", "observe", "if_then_else", "tau_know", "epi", "Mass", "Pr"]
--- factor : Just r → M ⋄
--- upd_CG : Just P ι → σ → σ
--- observe : Just t → M ⋄
--- if_then_else : Just t × α × α → α
--- tau_know : Just σ → t
--- epi : Just ι → e → (ω → t) → t
--- Mass : Nothing
--- Pr : Nothing
-
--- >>> mapM_ (\c -> putStrLn (c ++ " : " ++ show (tauFact (Left c)))) ["normalize", "Normalize", "observe", "upd_CG", "CG", "if_then_else"]
--- normalize : Just G α β → P β
--- Normalize : Nothing
--- observe : Just t → M ⋄
--- upd_CG : Just P ι → σ → σ
--- CG : Just σ → P ι
--- if_then_else : Just t × α × α → α
-
--- >>> c = Con . Left
--- >>> ty tauFact (App (c "normalize") (Return (Var "x")))   -- Nothing
--- normalize([x]) : P δ
--- >>> ty tauFact (App (c "Normalize") (Return (Var "x")))   -- P γ
--- ⌜Normalize([x])⌝ is not assigned a type.
-
--- >>> ty tau0 (Con (Left "disj"))
--- disj : r × G δ ε × G ζ ε → G (+ δ ζ) ε
-
--- >>> ty tauFact (Lam "m" (Lam "n" (Lam "p" (Let "x" (Let "y" (Var "m") (Var "n")) (Var "p")))))
--- λm.λn.λp.(x ∼ (y ∼ m; n); p) : G ζ ε → G η δ → G κ λ → G (+ ζ η κ) λ
-

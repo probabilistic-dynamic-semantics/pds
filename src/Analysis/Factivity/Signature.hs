@@ -31,6 +31,6 @@ tauFact = tau0                                                 <||>
 
 tauNames :: Sig
 tauNames = \case
-  Left "j" -> Just e
-  Left "b" -> Just e
+  Left "j" -> mkTy e
+  Left "b" -> mkTy e
   _        -> Nothing

@@ -18,7 +18,9 @@ module Framework.Lambda.Types ( arity
                               , gradePlus
                               , order
                               , popTy
+                              , QualifiedType(..)
                               , Sig
+                              , subsetOf
                               , ty
                               , tyEq
                               , tyEq'
@@ -59,6 +61,7 @@ pattern M, P :: Type -> Type
 pattern M x = G (Atom "M") x
 pattern P x = G (Atom "P") x
 
+data QualifiedType = QualifiedType Constr Type deriving (Eq)
 
 -- | Relations on types.
 type TypeRel = Type -> Type -> Bool
@@ -195,6 +198,15 @@ instance Show Type where
           wrap a@(G _ _)     = " (" ++ show a ++ ")"
           wrap a@(TyCon _ _) = " (" ++ show a ++ ")"
           wrap a             = " "  ++ show a
+
+instance Show QualifiedType where
+  show (QualifiedType []     ty0) = show ty0
+  show (QualifiedType constr ty0) = "(" ++ showConstr constr ++ ") ⟹ " ++
+                                    show ty0
+    where showConstr :: Constr -> String
+          showConstr [(ty1, ty2)]      = show ty1 ++ " ~ " ++ show ty2
+          showConstr ((ty1, ty2) : cs) = show ty1 ++ " ~ " ++ show ty2 ++
+            ", " ++ showConstr cs
 
 infixr 5 :→
 infixl 6 :×
@@ -333,21 +345,30 @@ unify cs = do
       y           -> x == y -- The "otherwise" case; fly, @At@, @Unit@, and @TyVar@.
 
 -- | Assign types to constants.
-type Sig = Constant -> Maybe Type
+type Sig = Constant -> Maybe QualifiedType
 
 type TyVars    = [String]
 type VarTyping = String -> Maybe Type
 type TVC       = (TyVars, VarTyping, Constr)
 
 -- | Compute the principal type of a term, given a signature.
-computeType :: Sig -> Term -> StateT TVC Maybe Type
+computeType :: Sig -> Term -> StateT TVC Maybe QualifiedType
 computeType tau t = do ty <- collectConstraints tau t
                        -- | Get type constraints.
                        (_, _, cs) <- get
                        -- | Find a most general unifier.
-                       subst <- lift (unify cs)
-                       -- | Use it to substitute.
-                       pure (applyRed gradePlus (applySubst subst ty))
+                       solved <- lift (unify cs)
+                       let (subst, residual) = partition isBinding solved
+                           ty' = applyRed gradePlus (applySubst subst ty)
+                           reqs = nub $ concatMap
+                             (\(x, y) -> popRequirements x ++ popRequirements y)
+                             solved
+                           popCs =
+                             [ (p, p)
+                             | (f, args, s) <- reqs
+                             , let p = TyCon ("pop" ++ f) (args ++ [s])
+                             ]
+                       pure (QualifiedType (nub (residual ++ popCs)) ty')
   where collectConstraints :: Sig -> Term -> StateT TVC Maybe Type
         collectConstraints tau = \case
           Var v -> do
@@ -375,14 +396,28 @@ computeType tau t = do ty <- collectConstraints tau t
             -- | Ensure that the type variables used for polymorphic constants
             -- are fresh (to prevent any potential clashes), and unify them with
             -- the original type variables.
-            let newVars = take lng types'
-                rest    = drop lng types'
-                types'  = filter (`notElem` getVars cType) types
-                lng     = length (getVars cType)
-                conCs   = zip (TyVar <$> getVars cType) (TyVar <$> newVars)
-            put (rest, f, cs)
+            let newVars    = take lng types'
+                rest       = drop lng types'
+                types'     = filter (`notElem` getVarsQT cType) types
+                lng        = length (getVarsQT cType)
+                conCs      = zip (TyVar <$> getVarsQT cType) (TyVar <$> newVars)
+                getVarsQT  = \(QualifiedType constr ty0) ->
+                              constrVars constr ++ getVars ty0
+                constrVars = foldr (\(ty1, ty2) rest ->
+                                      getVars ty1 ++ getVars ty2 ++ rest)
+                             []
+                asQT       = \subst (QualifiedType constr ty0)->
+                               QualifiedType
+                               (constrSub subst constr)
+                               (applySubst subst ty0)
+                constrSub  = \subst -> foldr (\(ty1, ty2) rest ->
+                                                ( applySubst subst ty1
+                                                , applySubst subst ty2 ) : rest)
+                                       []
             subst <- lift (unify conCs) 
-            pure (applySubst subst cType)
+            let QualifiedType cConstr cType' = asQT subst cType
+            put (rest, f, cs ++ cConstr)
+            pure cType'
           App t u -> do
             -- | Process the argument type; process the function type; then
             -- constrain them to be consistent.
@@ -500,7 +535,7 @@ applySubst s = \case
            lookUp v (_ : s')              = lookUp v s'
 
 -- | Typed terms (where not every term has a type).
-data Typed = Typed { termOf :: Term, typeOf :: Maybe Type } deriving (Eq)
+data Typed = Typed { termOf :: Term, typeOf :: Maybe QualifiedType } deriving (Eq)
 
 instance Show Typed where
   show (Typed te (Just ty)) = show te ++ " : " ++ show ty
@@ -509,7 +544,7 @@ instance Show Typed where
 -- | Provide a term along with its principal type, given a signature.
 ty :: Sig -> Term -> Typed
 ty tau te = Typed te theType
-    where theType :: Maybe Type
+    where theType :: Maybe QualifiedType
           theType = evalStateT (computeType tau te) (tyVars, start, empty)
 
           tyVars :: TyVars
@@ -748,12 +783,31 @@ gradeVars = \case
   TyCon _ ts -> concatMap gradeVars ts
   _          -> []
 
-groundings :: TypeRed -> Type -> [Type]
-groundings f t =
-  [ applyRed (\x -> gradePlus x <|> f x) (applySubst s t)
-  | s <- mapM (\v -> [(TyVar v, Atom "P"), (TyVar v, Atom "M")])
-              (nub (gradeVars t)) ]
+groundings :: TypeRed -> QualifiedType -> [Type]
+groundings f (QualifiedType cs t) =
+  [ applyRed (\x -> gradePlus x <|> f x)
+      (applySubst s t)
+  | s <- mapM assignments vars
+  , all (satisfied s) cs
+  ]
+  where
+    vars = nub
+      (gradeVars t ++
+        concatMap (\(x, y) -> getVars x ++ getVars y) cs)
 
-subsetOf :: TypeRed -> Type -> Type -> Bool
-subsetOf f a b = all (\ga -> any (instanceOf f ga) gbs) (groundings f a)
-  where gbs = groundings f b
+    assignments v =
+      [(TyVar v, Atom "P"), (TyVar v, Atom "M")]
+
+    satisfied s (x, y) =
+      applyRed gradePlus (applySubst s x) ==
+      applyRed gradePlus (applySubst s y)
+      
+subsetOf :: TypeRed -> QualifiedType -> QualifiedType -> Bool
+subsetOf f a b =
+  all (\ga -> any (instanceOf f ga) gbs) (groundings f a)
+  where
+    gbs = groundings f b
+
+isBinding :: (Type, Type) -> Bool
+isBinding (TyVar _, _) = True
+isBinding _           = False

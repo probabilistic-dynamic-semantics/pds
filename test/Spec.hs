@@ -148,6 +148,3 @@ lingSig :: Sig
 lingSig = \case
   Left "ling" -> mkTy (e :→ t)
   _           -> Nothing
-
--- >>> scaleNormingExample
--- Right (w ∼ Normal(⟨0.0, 1.0⟩); (x ∼ Uniform(⟨0.0, 1.0⟩); Normal(⟨w, x⟩))) : P r

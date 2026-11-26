@@ -92,8 +92,8 @@ ex = view "CG" >>>= lam c (
 joSig :: Sig
 joSig = \x ->
   case x of
-    Left "jo"      -> Just e
-    Left "animate" -> Just (ι :→ e :→ t)
+    Left "jo"      -> mkTy e
+    Left "animate" -> mkTy (ι :→ e :→ t)
 
 -- >>> ty (tauAdj <||> joLex) ex
 -- λu.(v ∼ (λs.[⟨CG(s), s⟩])(u); (λc.λu.(v ∼ (λx.λs.[⟨⋄, upd_CG(x)(s)⟩])((i ∼ c; (observe(animate(i)(jo)); [i])))(u); (λu.λu.[⟨jo, u⟩])(π₁(v))(π₂(v))))(π₁(v))(π₂(v))) : ν → P (e × ν)

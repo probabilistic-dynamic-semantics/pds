@@ -195,8 +195,9 @@ normal x y  = sCon "Normal" @@ (x & y)
 factor x y  = Let "_" (sCon "factor" @@ x) y
 observe x y = Let "_" (sCon "observe" @@ x) y
 bel         = Bel
-propose x φ = lam s (φ >>>= lam p (let' i (bel s x) (observe (p @@ i) (Return s))))
-  where s:i:_ = map Var $ fresh [x, φ]
+propose x φ = lam s (putPP sNew >>> (getPP >>>= (lam s' (φ >>>= lam p (let' i (bel s' x) (observe (p @@ i) (Return s')))))))
+  where s:i:s':_ = map Var $ fresh [x, φ]
+        sNew     = Upd "auth" x s
 
 let', respond :: Term -> Term -> Term -> Term
 let' (Var v)   = Let v

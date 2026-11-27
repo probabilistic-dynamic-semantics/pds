@@ -48,6 +48,10 @@ instance Interpretation Adjectives SynSem where
                                    syn = noun,
                                    sem = ty tauAdj (purePP (lam x (lam i (phil i @@ x))))
                                    } ]
+            "empty"         -> [ SynSem {
+                                   syn = ap,
+                                   sem = ty tauAdj (lam s (purePP (lam x (lam i (sCon "(≥)" @@ (sCon "emptiness" @@ i @@ x) @@ (sCon "d_empty" @@ i @@ (sCon "auth" @@ s))))) @@ s))
+                                   } ]
             "full"          -> [ SynSem {
                                    syn = ap \\ deg,
                                    sem = ty tauAdj (purePP (lam d (lam x (lam i (sCon "(≥)" @@ (sCon "height" @@ i @@ x) @@ d)))))
@@ -195,3 +199,6 @@ dynamicsRespond = respond2 (lam x (Return x))
 
 -- >>> ty tauAdj dynamicsPriorA
 -- [upd_BEL(λx.(v ∼ Gamma(⟨y, z⟩); (w ∼ Gamma(⟨y, z⟩); (c ∼ HalfNormal(⟨0.0, v⟩); (d ∼ HalfNormal(⟨0.0, w⟩); upd_d_empty(λz.if_then_else(⟨⟨(=)(⟨z, p⟩), -c⟩, -d⟩))(@))))))(ϵ)] : P ο1
+
+-- >>> ty tauAdj (lam s (purePP (lam x (lam i (sCon "(≥)" @@ (sCon "emptiness" @@ i @@ x) @@ (sCon "d_empty" @@ i @@ (sCon "auth" @@ s))))) @@ s))
+-- λs.(λu.[⟨λx.λi.(≥)(emptiness(i)(x))(d_empty(i)(auth(s))), u⟩])(s) : β → P (((e → λ → t) × β))

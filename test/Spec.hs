@@ -164,5 +164,5 @@ needsM t = Con (Left "needs_M") @@ t
 -- λm.λn.needs_M((x ∼ m; n)) : (δ + ε ~ M) ⟹ G δ γ → G ε η → η
 
 
--- >>> ty tau0 (Con (Left "disj"))
--- disj : r × G δ ε × G ζ ε → G (δ + ζ) ε
+-- >>> ty tau0 $ betaDeltaNormal (const Nothing) (propose x y)
+-- ⌜λu.λv.(y ∼ y(upd_auth(x)(u)); (w ∼ BEL(upd_auth(x)(u))(x); (observe(π₁(y)(w)); [upd_auth(x)(u)]))(π₂(y)))⌝ is not assigned a type.

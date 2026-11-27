@@ -294,13 +294,13 @@ unify cs = do
                   else Just (u1 ++ [eq], u2)
       (x, y) | let x' = norm x, let y' = norm y, x' /= x || y' /= y
          -> Just (u1 ++ [(x', y')], u2)                     -- reduce first
-      (TyCon "+" ts, Atom "P") -> Just (u1 ++ [(t, Atom "P") | t <- ts], u2)
-      (Atom "P", TyCon "+" ts) -> Just (u1 ++ [(t, Atom "P") | t <- ts], u2)
+      (TyCon "+" ts, Atom "P") -> Just (u1 ++ [ (t, Atom "P") | t <- ts ], u2)
+      (Atom "P", TyCon "+" ts) -> Just (u1 ++ [ (t, Atom "P") | t <- ts ], u2)
       (x@(TyVar _), y)    | occurs x y -> Nothing -- Impredicativity; uh oh!
       eq@(x@(TyVar _), y)              -> Just ( map (substEqs x y) u1 ++ [eq]
                                                , map (substEqs x y) u2 ) -- Substitute.
       (x, TyVar y)                     -> Just (u1 ++ [(TyVar y, x)], u2) -- Swap.
-      eq@(TyCon "+" _, _)      -> Just (u1 ++ [eq], u2)           -- stuck (e.g. against M): keep
+      eq@(TyCon "+" _, _)      -> Just (u1 ++ [eq], u2)           -- stuck (e.g., against M): keep
       eq@(_, TyCon "+" _)      -> Just (u1 ++ [eq], u2)
       eq@(x, y) | isPopTy x || isPopTy y -> Just (u1 ++ [eq], u2)
       (Atom _, _)                      -> Nothing -- We've already handled equalities.
@@ -329,9 +329,9 @@ unify cs = do
     -- | Substitute inside a type.
     substType :: Type -> Type -> Type -> Type
     substType x y z             | z == x = y
-    substType x y (z1 :→ z2)             = substType x y z1 :→ substType x y z2
-    substType x y (z1 :× z2)             = substType x y z1 :× substType x y z2
-    substType x y (G z1 z2)              = G (substType x y z1) (substType x y z2)
+    substType x y (z :→ w)               = substType x y z :→ substType x y w
+    substType x y (z :× w)               = substType x y z :× substType x y w
+    substType x y (G z w)                = G (substType x y z) (substType x y w)
     substType x y (TyCon f tys)          = TyCon f (map (substType x y) tys)
     substType _ _ z                      = z
 
@@ -482,39 +482,12 @@ computeType tau t = do ty <- collectConstraints tau t
             (g1:g2:b:rest, j, cs'') <- get
             put (rest, j, cs'' ++
                   [ (tType, G (TyVar g1) newTy)
-                  , (uType, G (TyVar g2) (TyVar b))
-                  ])
-
+                  , (uType, G (TyVar g2) (TyVar b)) ]
+                )
             pure (G (TyCon "+" [TyVar g1, TyVar g2]) (TyVar b))
               where checkType :: String -> Type -> Type -> (Type, Type)
                     checkType _  ty1@(G a _) ty2 = (ty1, G a ty2)
                     checkType p' ty1         ty2 = (ty1, G (TyVar p') ty2)
-                      -- error $ "checkType crashed in " ++
-                      -- show (Let v t u) ++ " : " ++ show ty1
-
-                    joinType :: String -> Type -> Type -> Type
-                    joinType p' body bound = case (bound, body) of
-                                               (P _, G f b) -> G f b       -- P ⊔ f = f
-                                               (M _, G _ b) -> M b         -- M absorbs
-                                               (_,   P b)   -> G bFl b     -- f ⊔ P = f
-                                                 where bFl = case bound of
-                                                         G f _ -> f           -- bound term's flavor variable
-                                                         _     -> TyVar p'    -- bound term unresolved: use the fallback
-                                               (_,   M b)   -> M b
-                                               _            -> error $ "joinType stuck: " ++ show body ++ " and " ++ show bound
-  
-                    -- joinType :: Type -> Type -> Type
-                    -- joinType ty@(P  _) (P _)           = ty
-                    -- joinType ty        (M _)           = asM ty
-                    -- joinType ty@(M _)  (P _)           = ty
-                    -- joinType ty        (G (TyVar _) _) = ty
-                    -- joinType ty1       ty2@(TyVar _)   = ty1
-                    -- joinType ty1       ty2             =
-                    --   error $
-                    --   "You got: " ++ show ty1 ++ " and " ++ show ty2 ++ "."
-
-                    asM :: Type -> Type
-                    asM (G _ ty) = M ty
           Return t -> do
             tType <- collectConstraints tau t
             pure (P tType)
@@ -537,7 +510,8 @@ applySubst s = \case
            lookUp v (_ : s')              = lookUp v s'
 
 -- | Typed terms (where not every term has a type).
-data Typed = Typed { termOf :: Term, typeOf :: Maybe QualifiedType } deriving (Eq)
+data Typed = Typed { termOf :: Term, typeOf :: Maybe QualifiedType }
+  deriving (Eq)
 
 instance Show Typed where
   show (Typed te (Just ty)) = show te ++ " : " ++ show ty
@@ -812,4 +786,4 @@ subsetOf f a b =
 
 isBinding :: (Type, Type) -> Bool
 isBinding (TyVar _, _) = True
-isBinding _           = False
+isBinding _            = False

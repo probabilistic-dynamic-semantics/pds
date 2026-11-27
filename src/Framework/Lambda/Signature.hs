@@ -75,6 +75,9 @@ tauProbProg :: Sig
 tauProbProg = \case
   Left "Bernoulli"    -> mkTy (r :→ P t)
   Left "Beta"         -> mkTy (r :× r :→ P r)
+  Left "Exponential"  -> mkTy (r :→ P r)
+  Left "Gamma"        -> mkTy (r :× r :→ P r)
+  Left "HalfNormal"   -> mkTy (r :× r :→ P r)
   Left "Normal"       -> mkTy (r :× r :→ P r)
   Left "Normal_cdf"   -> mkTy (r :× r :→ r :→ r)
   Left "Normal_ccdf"  -> mkTy (r :× r :→ r :→ r)

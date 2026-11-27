@@ -184,6 +184,14 @@ likelihoodPrior = Return (upd_CG cg' ϵ)
 adjectivesRespond :: Term -> Term -> Term
 adjectivesRespond = respond (lam x (Let "sigma" (Uniform 0 1) (Normal x (Var "sigma"))))
 
+-- | Prior to be used for dynamics examples.
+dynamicsPriorA :: Term
+dynamicsPriorA = Return (upd_BEL bel' ϵ)
+  where bel' = lam x (let' v (Gamma y z) (let' w (Gamma y z) (let' c (HalfNormal 0 v) (let' d (HalfNormal 0 w) (Upd "d_empty" (lam z (ITE (Eq z (Con (Left "p"))) (-c) (-d))) _0)))))
+
 -- | Reponse function to be used for dynamics examples.
 dynamicsRespond :: Term -> Term -> Term -> Term
 dynamicsRespond = respond2 (lam x (Return x))
+
+-- >>> ty tauAdj dynamicsPriorA
+-- [upd_BEL(λx.(v ∼ Gamma(⟨y, z⟩); (w ∼ Gamma(⟨y, z⟩); (c ∼ HalfNormal(⟨0.0, v⟩); (d ∼ HalfNormal(⟨0.0, w⟩); upd_d_empty(λz.if_then_else(⟨⟨(=)(⟨z, p⟩), -c⟩, -d⟩))(@))))))(ϵ)] : P ο1

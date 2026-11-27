@@ -36,7 +36,7 @@ import Control.Monad ((<=<))
 import Control.Monad.State    (evalStateT, get, lift, put, StateT)
 import Data.Char              (toLower)
 import Data.Maybe
-import Data.List              (isPrefixOf, nub, partition)
+import Data.List              (intercalate, isPrefixOf, nub, partition)
 import Framework.Lambda.Terms
 
 --------------------------------------------------------------------------------
@@ -190,6 +190,7 @@ instance Show Type where
     M a                      -> "M" ++ wrap a
     P a                      -> "P" ++ wrap a
     G a b                    -> "G" ++ wrap a ++ wrap b
+    TyCon "+" tys            -> intercalate " + " (map show tys)
     TyCon f tys              -> f ++ concatMap wrap tys
     TyVar s                  -> s
     where wrap :: Type -> String
@@ -204,9 +205,8 @@ instance Show QualifiedType where
   show (QualifiedType constr ty0) = "(" ++ showConstr constr ++ ") ⟹ " ++
                                     show ty0
     where showConstr :: Constr -> String
-          showConstr [(ty1, ty2)]      = show ty1 ++ " ~ " ++ show ty2
-          showConstr ((ty1, ty2) : cs) = show ty1 ++ " ~ " ++ show ty2 ++
-            ", " ++ showConstr cs
+          showConstr = intercalate ", " .
+                       map (\(ty1, ty2) -> show ty1 ++ " ~ " ++ show ty2)
 
 infixr 5 :→
 infixl 6 :×

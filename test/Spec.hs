@@ -152,3 +152,17 @@ lingSig = \case
 
 -- >>> ty tauFact (Con (Left "pop_QUD"))
 -- pop_QUD : (popQ δ γ β ~ popQ δ γ β) ⟹ β → ((γ → δ → t) × popQ δ γ β)
+
+tauNeedsM :: Sig
+tauNeedsM = \case
+  Left "needs_M" -> mkTy (M α :→ α)
+
+needsM :: Term -> Term
+needsM t = Con (Left "needs_M") @@ t
+
+-- >>> ty tauNeedsM (lam m (lam n (needsM (let' x m n))))
+-- λm.λn.needs_M((x ∼ m; n)) : (δ + ε ~ M) ⟹ G δ γ → G ε η → η
+
+
+-- >>> ty tau0 (Con (Left "disj"))
+-- disj : r × G δ ε × G ζ ε → G (δ + ζ) ε

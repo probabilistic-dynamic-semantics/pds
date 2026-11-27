@@ -22,18 +22,24 @@ import Theory.Signature
 
 tauAdj :: Sig
 tauAdj = tau0                                      <||>
-         tauNames                                  <||>
+         tauEntities                               <||>
          tauStates                                 <||>
          mkStateSig ι [ ( "soc_pla"   , e :→ t )
                       , ( "ling"      , e :→ t )
                       , ( "phil"      , e :→ t )
+                      , ( "tree"      , e :→ t )
+                      , ( "bottle"    , e :→ t )
                       , ( "height"    , e :→ r )
                       , ( "emptiness" , e :→ r )
-                      , ( "d_tall"    , r      )
-                      , ( "d_empty"   , r      ) ]
+                      , ( "d_tall"    , e :→ r )
+                      , ( "d_empty"   , e :→ r )
+                      , ( "σ_empty"   , e :→ r )
+                      , ( "σ_tall"    , e :→ r ) ]
 
-tauNames :: Sig
-tauNames = \case
+tauEntities :: Sig
+tauEntities = \case
   Left "j" -> mkTy e
   Left "b" -> mkTy e
+  Left "p" -> mkTy e
+  Left "ι" -> mkTy ((e :→ t) :→ e)
   _        -> Nothing

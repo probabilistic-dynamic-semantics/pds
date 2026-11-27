@@ -84,10 +84,16 @@ instance Eq Term where
 instance Show Term where
   show = \case
     Var v             -> v
-    Con (Left "mult") `App` (t `Pair` u) -> "(" ++ show t ++ " * " ++ show u ++ ")"
-    Con (Left "div") `App` (t `Pair` u) -> "(" ++ show t ++ " / " ++ show u ++ ")"
-    Con (Left "add") `App` (t `Pair` (Con (Left "neg") `App` u)) -> "(" ++ show t ++ " - " ++ show u ++ ")"
-    Con (Left "add") `App` (t `Pair` u) -> "(" ++ show t ++ " + " ++ show u ++ ")" 
+    Con (Left "mult") `App` (t `Pair` u)
+                      -> "(" ++ show t ++ " * " ++ show u ++ ")"
+    Con (Left "div") `App` (t `Pair` u)
+                      -> "(" ++ show t ++ " / " ++ show u ++ ")"
+    Con (Left "add") `App` (t `Pair` (Con (Left "neg") `App` u))
+                      -> "(" ++ show t ++ " - " ++ show u ++ ")"
+    Con (Left "add") `App` (t `Pair` u)
+                      -> "(" ++ show t ++ " + " ++ show u ++ ")"
+    Con (Left "neg") `App` t
+                      -> "-" ++ show t
     Con (Left s)      -> s
     Con (Right d)     -> show (fromRational d)
     Lam v t           -> "λ" ++ v ++ "." ++ show t
@@ -101,7 +107,8 @@ instance Show Term where
     Let v t u         -> case betaEtaNormal t of
                            Con (Left "factor") `App` _  -> "(" ++ rest
                            Con (Left "observe") `App` _ -> "(" ++ rest
-                           _                            -> "(" ++ v ++ " ∼ " ++ rest
+                           _                            -> "(" ++ v ++
+                                                           " ∼ " ++ rest
                            where rest = show t ++ "; " ++ show u ++ ")"
 
 -- **** Smart-ish constructors
